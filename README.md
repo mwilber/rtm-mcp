@@ -24,16 +24,21 @@ npm install
 
 ## Development
 ```bash
-npm run dev
+npm run dev          # stdio transport (spawned by Inspector / Claude Code)
+npm run dev:http     # streamable HTTP transport at http://localhost:3000/mcp
 ```
-Runs the server with `ts-node` so edits in `src/` take effect immediately.
 
 ## Build & Run
 ```bash
 npm run build
-npm start
+npm start            # stdio
+npm run start:http   # HTTP (PORT env var overrides 3000)
 ```
-`build` compiles TypeScript (and the RTM client JS helper) to `dist/`, and `start` launches the compiled server over stdio.
+`build` compiles TypeScript (and the RTM client JS helper) to `dist/`.
+
+### HTTP transport notes
+- The HTTP server uses MCP’s streamable transport with per-session state. Clients should send an initialization request without `Mcp-Session-Id`, then reuse the header returned in the response for subsequent POST/GET/DELETE calls.
+- Update `allowedOrigins` / `allowedHosts` inside `src/http-server.ts` before exposing it beyond localhost (see inline comments).
 
 ## Tools
 | Tool ID | Purpose | Key Arguments |

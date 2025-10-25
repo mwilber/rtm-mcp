@@ -1,7 +1,8 @@
 # Repository Guidelines
 
 ## Project Structure & Module Organization
-- `src/index.ts` bootstraps the MCP server and registers tools; add future handlers under `src/tools/` and import them into the entry point.
+- `src/server.ts` builds and configures the `McpServer`, registers tools, and is shared by both transports.
+- `src/index.ts` hosts the stdio entry point; `src/http-server.ts` exposes the streamable HTTP transport.
 - `package.json` centralizes scripts plus dependency pins; modify scripts here rather than in ad-hoc shell snippets.
 - `tsconfig.json` enforces strict ES2020 TypeScript builds; change compiler behavior in this file instead of per-module flags.
 - `src/rtm-client.js` houses the Remember The Milk REST helper; keep it framework-agnostic and avoid MCP-specific logic inside.
@@ -9,9 +10,10 @@
 
 ## Build, Test, and Development Commands
 - `npm install` — restores dependencies after cloning or lockfile updates.
-- `npm run dev` — launches the stdio server through `ts-node` for live editing sessions.
+- `npm run dev` — launches the stdio server through `ts-node`.
+- `npm run dev:http` — starts the HTTP transport at `http://localhost:3000/mcp` (set `PORT` to override).
 - `npm run build` — emits production JavaScript in `dist/`.
-- `npm start` — runs the compiled bundle; use this when wiring the server into MCP-aware tools.
+- `npm start` / `npm run start:http` — run the compiled stdio/HTTP servers respectively.
 - `npm run typecheck` — executes `tsc --noEmit`; use it as the minimum CI gate.
 
 ## Coding Style & Naming Conventions
