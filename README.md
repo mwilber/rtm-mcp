@@ -7,15 +7,24 @@ Boilerplate Model Context Protocol (MCP) server that exposes a single `hello-wor
 - npm 8+
 
 ## Environment Variables
-Create a `.env` (or export values in your shell) with the Remember The Milk credentials the MCP tools should use:
+Create a `.env` with the Remember The Milk credentials the MCP tools should use:
 
 ```bash
-export RTM_API_KEY="<your api key>"
-export RTM_SHARED_SECRET="<your shared secret>"
-export RTM_AUTH_TOKEN="<per-user auth token>"
+RTM_API_KEY="YOUR_RTM_API_KEY"
+RTM_SHARED_SECRET="YOUR_RTM_SHARED_SECRET"
+RTM_AUTH_TOKEN="YOUR_RTM_AUTH_TOKEN"
 ```
 
-The server loads these variables at runtime; both the Inspector and `npm run dev` inherit whatever is set in the current shell.
+### Direnv workflow
+
+This repo ships with a `.envrc` that loads `.env` automatically via [direnv](https://direnv.net/):
+
+```bash
+brew install direnv              # or your package manager
+direnv allow                     # trust the .envrc in this repo
+```
+
+From then on, every shell you open inside the repo receives the RTM credentials without manual exports. When using MCP Inspector (or other stdio clients), launch them from the same direnv-enabled shell so they inherit the vars.
 
 ## Setup
 ```bash
