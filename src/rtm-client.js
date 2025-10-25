@@ -91,7 +91,7 @@ export class RTMClient {
 	/**
 	 * List tasks filtered by due date (single date or {start, end}) and/or a tag.
 	 * @param {Object} params
-	 * @param {string|{start:string,end:string}} [params.dueDate]  // "YYYY-MM-DD" or {start:"YYYY-MM-DD", end:"YYYY-MM-DD"}
+	 * @param {string|{start?:string,end?:string}} [params.dueDate]  // "YYYY-MM-DD" or partial range
 	 * @param {string} [params.tag]
 	 * @returns {Promise<Array<{id:{list:string,series:string,task:string}, name:string, due:string|null, priority:1|2|3|null, tags:string[] }>>}
 	 */
@@ -139,11 +139,19 @@ export class RTMClient {
 			if (tagsNode && tagsNode.tag) {
 			tagList = Array.isArray(tagsNode.tag) ? tagsNode.tag : [tagsNode.tag];
 			}
+			let priority = null;
+			if (t.priority && t.priority !== "N") {
+			const parsedPriority = Number(t.priority);
+			if ([1, 2, 3].includes(parsedPriority)) {
+				priority = parsedPriority;
+			}
+			}
+
 			results.push({
 			id: { list: li.id, series: ts.id, task: t.id },
 			name: ts.name,
 			due: t.due || null,
-			priority: t.priority ? Number(t.priority) : null, // "1" | "2" | "3" | "N"
+			priority,
 			tags: tagList,
 			});
 		}

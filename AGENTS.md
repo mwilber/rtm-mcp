@@ -4,6 +4,7 @@
 - `src/index.ts` bootstraps the MCP server and registers tools; add future handlers under `src/tools/` and import them into the entry point.
 - `package.json` centralizes scripts plus dependency pins; modify scripts here rather than in ad-hoc shell snippets.
 - `tsconfig.json` enforces strict ES2020 TypeScript builds; change compiler behavior in this file instead of per-module flags.
+- `src/rtm-client.js` houses the Remember The Milk REST helper; keep it framework-agnostic and avoid MCP-specific logic inside.
 - Build output (`dist/`) stays untracked—run `npm run build` locally when compiled files are required.
 
 ## Build, Test, and Development Commands
@@ -24,6 +25,12 @@
 - Name files with the `.test.ts` suffix beside the code under test (e.g., `src/tools/greet.test.ts`).
 - Cover success, validation, and failure flows for every tool handler; mock transports sparingly so assertions stay close to observable output.
 - Record manual validation steps in PRs until automation lands.
+
+## Security & Configuration Tips
+- RTM tools require `RTM_API_KEY`, `RTM_SHARED_SECRET`, and `RTM_AUTH_TOKEN` at runtime; export them in your shell or load them via an approved secret manager, never commit them.
+- When touching `src/rtm-client.js`, be mindful that it relies on the global `fetch` API available in Node 18+; add polyfills only if you keep the dependency lightweight.
+- Validate that stdio-based clients inherit the correct environment by launching them from the same shell session used to export credentials.
+- Prefer local `.env` files that stay gitignored (or use `direnv`) to avoid leaking tokens in scripts.
 
 ## Commit & Pull Request Guidelines
 - Existing history is minimal, so follow Conventional Commits (`feat: add weather tool`) to prepare for automated changelogs.
@@ -254,4 +261,3 @@ const rtm = new RTMClient({
 **Author:** Matt Wilber
 **Agent Version:** 1.0
 **Last Updated:** 2025-10-24
-
