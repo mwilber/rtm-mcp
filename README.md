@@ -1,6 +1,6 @@
 # rtm-mcp
 
-Boilerplate Model Context Protocol (MCP) server that exposes a single `hello-world` tool. The server runs over stdio so it can be embedded in tools such as Claude Code, Cursor, or the MCP Inspector.
+Model Context Protocol (MCP) server for Remember The Milk task management. It runs over stdio so it can be embedded in tools such as Claude Code, Cursor, or the MCP Inspector.
 
 ## Prerequisites
 - Node.js 18+ (the MCP SDK, RTM client, and native `fetch` all require modern Node features)
@@ -38,7 +38,6 @@ npm start
 ## Tools
 | Tool ID | Purpose | Key Arguments |
 | --- | --- | --- |
-| `hello-world` | Returns a friendly greeting, optionally personalized. | `name` (optional) |
 | `rtm-list-tasks` | Lists Remember The Milk tasks filtered by due date or tag. | `dueDate`, `dueStart`, `dueEnd`, `tag` |
 | `rtm-add-task` | Creates an RTM task with optional due date, recurrence, priority, and tags. | `name` (required), `dueDate`, `repeats`, `priority`, `tags`, `mode` |
 

@@ -17,7 +17,7 @@
 ## Coding Style & Naming Conventions
 - Stick to strict TypeScript with ES modules, two-space indenting, single quotes, and trailing commas on multiline literals to keep diffs tidy.
 - Exported helpers should declare explicit return types, while internal functions can rely on inference.
-- Tool identifiers stay kebab-case (`hello-world`), their `title` metadata uses Title Case, and descriptions should explain the observable outcome in under 100 characters.
+- Tool identifiers stay kebab-case (`rtm-list-tasks`), their `title` metadata uses Title Case, and descriptions should explain the observable outcome in under 100 characters.
 - Keep comments purposeful—reserve them for protocol nuances or non-obvious transport behavior.
 
 ## Testing Guidelines

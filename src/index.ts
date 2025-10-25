@@ -71,38 +71,6 @@ const formatTaskSummary = (task: ListTaskResult): string => {
 };
 
 server.registerTool(
-  'hello-world',
-  {
-    title: 'Hello World Tool',
-    description: 'Returns a friendly greeting. Optionally personalize it with a name.',
-    inputSchema: {
-      name: z
-        .string()
-        .min(1, 'Provide at least one character')
-        .max(120, 'Keep names short for the LLM UI')
-        .describe('Optional name to greet')
-        .optional()
-    },
-    outputSchema: {
-      greeting: z.string()
-    }
-  },
-  async ({ name }) => {
-    const greeting = name ? `Hello, ${name}!` : 'Hello, world!';
-
-    return {
-      content: [
-        {
-          type: 'text',
-          text: greeting
-        }
-      ],
-      structuredContent: { greeting }
-    };
-  }
-);
-
-server.registerTool(
   'rtm-list-tasks',
   {
     title: 'RTM: List Tasks',

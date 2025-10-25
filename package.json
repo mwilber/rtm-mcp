@@ -1,7 +1,7 @@
 {
   "name": "rtm-mcp",
   "version": "0.1.0",
-  "description": "Boilerplate Model Context Protocol server with a hello-world tool.",
+  "description": "Model Context Protocol server exposing Remember The Milk tools.",
   "type": "module",
   "main": "dist/index.js",
   "scripts": {
@@ -18,7 +18,7 @@
   "keywords": [
     "mcp",
     "model-context-protocol",
-    "hello-world"
+    "remember-the-milk"
   ],
   "author": "Matthew Wilber",
   "license": "MIT",
