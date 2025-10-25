@@ -1,0 +1,41 @@
+{
+  "name": "rtm-mcp",
+  "version": "0.1.0",
+  "description": "Boilerplate Model Context Protocol server with a hello-world tool.",
+  "type": "module",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "ts-node src/index.ts",
+    "start": "node dist/index.js",
+    "typecheck": "tsc --noEmit",
+    "test": "echo \"No tests defined yet\""
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mwilber/rtm-mcp.git"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "hello-world"
+  ],
+  "author": "Matthew Wilber",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/mwilber/rtm-mcp/issues"
+  },
+  "homepage": "https://github.com/mwilber/rtm-mcp#readme",
+  "files": [
+    "dist"
+  ],
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.20.2",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@types/node": "^24.9.1",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.3"
+  }
+}
