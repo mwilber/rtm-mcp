@@ -27,7 +27,7 @@
 - Record manual validation steps in PRs until automation lands.
 
 ## Security & Configuration Tips
-- RTM tools require `RTM_API_KEY`, `RTM_SHARED_SECRET`, and `RTM_AUTH_TOKEN` at runtime; populate `.env` with placeholders and let `direnv` (via the provided `.envrc`) load them automatically, but never commit real values.
+- RTM tools require `RTM_API_KEY`, `RTM_SHARED_SECRET`, and `RTM_AUTH_TOKEN` at runtime; populate `.env` with placeholders and let `dotenv` (imported in `src/index.ts`) load them automatically, but never commit real values to source control.
 - When touching `src/rtm-client.js`, be mindful that it relies on the global `fetch` API available in Node 18+; add polyfills only if you keep the dependency lightweight.
 - Validate that stdio-based clients inherit the correct environment by launching them from the same shell session used to export credentials.
 - Prefer local `.env` files that stay gitignored (or use `direnv`) to avoid leaking tokens in scripts.

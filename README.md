@@ -15,16 +15,7 @@ RTM_SHARED_SECRET="YOUR_RTM_SHARED_SECRET"
 RTM_AUTH_TOKEN="YOUR_RTM_AUTH_TOKEN"
 ```
 
-### Direnv workflow
-
-This repo ships with a `.envrc` that loads `.env` automatically via [direnv](https://direnv.net/):
-
-```bash
-brew install direnv              # or your package manager
-direnv allow                     # trust the .envrc in this repo
-```
-
-From then on, every shell you open inside the repo receives the RTM credentials without manual exports. When using MCP Inspector (or other stdio clients), launch them from the same direnv-enabled shell so they inherit the vars.
+The server loads `.env` automatically via [`dotenv`](https://github.com/motdotla/dotenv) as soon as it starts, so any process launched from this repo (MCP Inspector, `npm run dev`, etc.) gains the credentials with no extra shell setup.
 
 ## Setup
 ```bash
