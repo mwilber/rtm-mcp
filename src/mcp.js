@@ -7,12 +7,56 @@ import {
   ListToolsRequestSchema,
   isInitializeRequest,
 } from "@modelcontextprotocol/sdk/types.js";
+import { RTMClient } from "./rtm-client.js";
+
+const REQUIRED_RTM_ENV = ["RTM_API_KEY", "RTM_SHARED_SECRET", "RTM_AUTH_TOKEN"];
+
+const createRtmClient = () => {
+  const missing = REQUIRED_RTM_ENV.filter((key) => !process.env[key]);
+  if (missing.length) {
+    throw new Error(
+      `Missing Remember The Milk credentials (${missing.join(
+        ", "
+      )}). Set them in the environment before calling RTM tools.`
+    );
+  }
+
+  return new RTMClient({
+    apiKey: process.env.RTM_API_KEY,
+    sharedSecret: process.env.RTM_SHARED_SECRET,
+    authToken: process.env.RTM_AUTH_TOKEN,
+  });
+};
+
+const resolveRtmClient = (() => {
+  let client = null;
+  return () => {
+    if (!client) {
+      client = createRtmClient();
+    }
+    return client;
+  };
+})();
+
+const formatTaskSummary = (task) => {
+  const bits = [`• ${task.name}`];
+  if (task.due) {
+    bits.push(`due ${task.due}`);
+  }
+  if (task.priority) {
+    bits.push(`priority ${task.priority}`);
+  }
+  if (Array.isArray(task.tags) && task.tags.length) {
+    bits.push(`#${task.tags.join(" #")}`);
+  }
+  return bits.join(" | ");
+};
 
 function createMcpServer() {
   const mcpServer = new Server(
     {
-      name: "webmcp-server",
-      version: "1.0.0",
+      name: "rtm-mcp",
+      version: "0.1.0",
     },
     {
       capabilities: {
@@ -23,11 +67,141 @@ function createMcpServer() {
 
   mcpServer.setRequestHandler(ListToolsRequestSchema, async () => {
     return {
-      tools: [],
+      tools: [
+        {
+          name: "rtm-list-tasks",
+          title: "RTM: List Tasks",
+          description:
+            "Fetch tasks from Remember The Milk filtered by due date and tag.",
+          inputSchema: {
+            type: "object",
+            properties: {
+              dueDate: {
+                type: "string",
+                description:
+                  "Single due date filter (YYYY-MM-DD or natural language).",
+              },
+              dueStart: {
+                type: "string",
+                description: "Start of a due date range (YYYY-MM-DD).",
+              },
+              dueEnd: {
+                type: "string",
+                description: "End of a due date range (YYYY-MM-DD).",
+              },
+              tag: {
+                type: "string",
+                description: "Filter by a Remember The Milk tag.",
+              },
+            },
+          },
+        },
+        {
+          name: "rtm-add-task",
+          title: "RTM: Add Task",
+          description:
+            "Create a Remember The Milk task with optional due date, recurrence, and tags.",
+          inputSchema: {
+            type: "object",
+            properties: {
+              name: {
+                type: "string",
+                minLength: 1,
+                description: "Task name.",
+              },
+              dueDate: {
+                type: "string",
+                description:
+                  'Natural language or ISO due date, e.g., "next Tuesday 5pm" or "2025-10-31".',
+              },
+              repeats: {
+                type: "string",
+                description: 'Recurrence pattern such as "every week".',
+              },
+              priority: {
+                type: "integer",
+                enum: [1, 2, 3],
+                description: "1 (high), 2, or 3.",
+              },
+              tags: {
+                type: "array",
+                items: { type: "string", minLength: 1 },
+                maxItems: 10,
+                description: "List of tags to apply.",
+              },
+              mode: {
+                type: "string",
+                enum: ["smart", "explicit"],
+                default: "smart",
+                description: "Use Smart Add parsing or explicit updates.",
+              },
+            },
+            required: ["name"],
+          },
+        },
+      ],
     };
   });
 
   mcpServer.setRequestHandler(CallToolRequestSchema, async (request) => {
+    const params = request.params || {};
+    const args = params.arguments || {};
+
+    if (params.name === "rtm-list-tasks") {
+      const { dueDate, dueStart, dueEnd, tag } = args;
+      const client = resolveRtmClient();
+      const dueRange =
+        dueStart || dueEnd
+          ? { start: dueStart || undefined, end: dueEnd || undefined }
+          : undefined;
+
+      const tasks = await client.listTasks({
+        dueDate: dueDate ?? dueRange,
+        tag: tag || undefined,
+      });
+
+      const summary =
+        tasks.length === 0
+          ? "No tasks matched the supplied filters."
+          : tasks.slice(0, 10).map(formatTaskSummary).join("\n");
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: summary,
+          },
+        ],
+        structuredContent: {
+          total: tasks.length,
+          tasks,
+        },
+      };
+    }
+
+    if (params.name === "rtm-add-task") {
+      const { name, dueDate, repeats, priority, tags, mode = "smart" } = args;
+      const client = resolveRtmClient();
+      const result = await client.addTask({
+        name,
+        dueDate: dueDate || undefined,
+        repeats: repeats || undefined,
+        priority: priority || undefined,
+        tags: tags || undefined,
+        mode,
+      });
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Created task "${name}" (list ${result.id.list}).`,
+          },
+        ],
+        structuredContent: result,
+      };
+    }
+
     throw new Error(`Unknown tool: ${request.params.name}`);
   });
 
