@@ -1,0 +1,18 @@
+{
+  "name": "rtm-mcp",
+  "description": "Remember The Milk MCP server with HTTP and stdio transports",
+  "env": {
+    "RTM_API_KEY": {
+      "description": "Remember The Milk API key",
+      "required": true
+    },
+    "RTM_SHARED_SECRET": {
+      "description": "Remember The Milk shared secret",
+      "required": true
+    },
+    "RTM_AUTH_TOKEN": {
+      "description": "Remember The Milk auth token",
+      "required": true
+    }
+  }
+}

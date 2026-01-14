@@ -11,7 +11,7 @@ const repoUrl = "https://github.com/mwilber/webmcptest";
 
 // Health check endpoint
 app.get("/health", (req, res) => {
-  res.json({ status: "ok", server: "webmcp-server" });
+  res.json({ status: "ok", server: "rtm-mcp" });
 });
 
 app.get("/", (req, res) => {

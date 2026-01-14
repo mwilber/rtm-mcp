@@ -45,6 +45,7 @@ This repo is already set up for Heroku (see `Procfile`).
 ```bash
 heroku login
 heroku create your-app-name
+heroku config:set RTM_API_KEY=... RTM_SHARED_SECRET=... RTM_AUTH_TOKEN=...
 git push heroku main
 ```
 
@@ -52,6 +53,8 @@ Your MCP endpoint will be:
 ```
 https://your-app-name.herokuapp.com/mcp
 ```
+
+RTM credentials should only be stored as Heroku config vars (or a local `.env` for development).
 
 ## License
 
