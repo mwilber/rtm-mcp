@@ -1,46 +1,22 @@
 {
-  "name": "rtm-mcp",
-  "version": "0.1.0",
-  "description": "Model Context Protocol server exposing Remember The Milk tools.",
+  "name": "webmcp",
+  "version": "1.0.0",
+  "description": "A remote MCP server with HTTP transport",
+  "main": "server.js",
   "type": "module",
-  "main": "dist/index.js",
+  "engines": {
+    "node": ">=18"
+  },
   "scripts": {
-    "build": "tsc -p tsconfig.json",
-    "dev": "ts-node src/index.ts",
-    "dev:http": "ts-node src/http-server.ts",
-    "start": "node dist/index.js",
-    "start:http": "node dist/http-server.js",
-    "typecheck": "tsc --noEmit",
-    "test": "echo \"No tests defined yet\""
+    "start": "node server.js",
+    "dev": "node --watch server.js"
   },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/mwilber/rtm-mcp.git"
-  },
-  "keywords": [
-    "mcp",
-    "model-context-protocol",
-    "remember-the-milk"
-  ],
-  "author": "Matthew Wilber",
-  "license": "MIT",
-  "bugs": {
-    "url": "https://github.com/mwilber/rtm-mcp/issues"
-  },
-  "homepage": "https://github.com/mwilber/rtm-mcp#readme",
-  "files": [
-    "dist"
-  ],
+  "keywords": ["mcp", "model-context-protocol"],
+  "author": "",
+  "license": "ISC",
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.20.2",
+    "@modelcontextprotocol/sdk": "^1.25.2",
     "dotenv": "^17.2.3",
-    "express": "^5.1.0",
-    "zod": "^3.25.76"
-  },
-  "devDependencies": {
-    "@types/express": "^5.0.4",
-    "@types/node": "^24.9.1",
-    "ts-node": "^10.9.2",
-    "typescript": "^5.9.3"
+    "express": "^5.2.1"
   }
 }

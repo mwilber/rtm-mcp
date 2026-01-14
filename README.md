@@ -1,67 +1,58 @@
-# rtm-mcp
+# WebMCP - Remote MCP Server
 
-Model Context Protocol (MCP) server for Remember The Milk task management. It runs over stdio so it can be embedded in tools such as Claude Code, Cursor, or the MCP Inspector.
+Node.js MCP server with streamable HTTP and stdio transports.
 
-## Prerequisites
-- Node.js 18+ (the MCP SDK, RTM client, and native `fetch` all require modern Node features)
-- npm 8+
+## What's In This Repo
 
-## Environment Variables
-Create a `.env` with the Remember The Milk credentials the MCP tools should use:
+- **MCP server**: `/mcp` endpoint (streamable HTTP) and stdio transport (`--stdio`), entry point `server.js`.
 
-```bash
-RTM_API_KEY="YOUR_RTM_API_KEY"
-RTM_SHARED_SECRET="YOUR_RTM_SHARED_SECRET"
-RTM_AUTH_TOKEN="YOUR_RTM_AUTH_TOKEN"
-```
+## Quick Start (Local)
 
-The server loads `.env` automatically via [`dotenv`](https://github.com/motdotla/dotenv) as soon as it starts, so any process launched from this repo (MCP Inspector, `npm run dev`, etc.) gains the credentials with no extra shell setup.
+1. Install dependencies:
+   ```bash
+   npm install
+   ```
 
-## Setup
-```bash
-npm install
-```
+2. Start the server (preferred for local iteration):
+   ```bash
+   npm run dev
+   ```
 
-## Development
-```bash
-npm run dev          # stdio transport (spawned by Inspector / Claude Code)
-npm run dev:http     # streamable HTTP transport at http://localhost:3000/mcp
-```
+The server defaults to port `3000` unless `PORT` is set.
 
-## Build & Run
-```bash
-npm run build
-npm start            # stdio
-npm run start:http   # HTTP (PORT env var overrides 3000)
-```
-`build` compiles TypeScript (and the RTM client JS helper) to `dist/`.
+## Endpoints
 
-### HTTP transport notes
-- The HTTP server uses MCP’s streamable transport with per-session state. Clients should send an initialization request without `Mcp-Session-Id`, then reuse the header returned in the response for subsequent POST/GET/DELETE calls.
-- Update `allowedOrigins` / `allowedHosts` inside `src/http-server.ts` before exposing it beyond localhost (see inline comments).
+- `GET /health` -> `{ "status": "ok", "server": "webmcp-server" }`
+- `POST /mcp` -> MCP JSON-RPC 2.0 (session header on `initialize`)
+
+### MCP Session Header
+
+The streamable HTTP MCP transport sets `mcp-session-id` in the `initialize` response. Subsequent requests must include it as a request header.
 
 ## Tools
-| Tool ID | Purpose | Key Arguments |
-| --- | --- | --- |
-| `rtm-list-tasks` | Lists Remember The Milk tasks filtered by due date or tag. | `dueDate`, `dueStart`, `dueEnd`, `tag` |
-| `rtm-add-task` | Creates an RTM task with optional due date, recurrence, priority, and tags. | `name` (required), `dueDate`, `repeats`, `priority`, `tags`, `mode` |
 
-Example prompts:
+Tools are defined in `src/mcp.js`. Keep tool definitions in sync with handlers when adding new tools.
 
-```json
-{
-  "name": "rtm-list-tasks",
-  "input": { "tag": "inbox" }
-}
+## Development
+
+- `npm run dev` for auto-reload
+- `npm start` for a basic server start
+
+## Deployment (Heroku)
+
+This repo is already set up for Heroku (see `Procfile`).
+
+```bash
+heroku login
+heroku create your-app-name
+git push heroku main
 ```
 
-```json
-{
-  "name": "rtm-add-task",
-  "input": {
-    "name": "Draft Q2 roadmap",
-    "dueDate": "next Friday 5pm",
-    "tags": ["product", "q2"]
-  }
-}
+Your MCP endpoint will be:
 ```
+https://your-app-name.herokuapp.com/mcp
+```
+
+## License
+
+ISC
