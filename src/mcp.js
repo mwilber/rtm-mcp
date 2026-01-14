@@ -8,14 +8,6 @@ import {
   isInitializeRequest,
 } from "@modelcontextprotocol/sdk/types.js";
 
-const jokes = [
-  "Why do programmers prefer dark mode? Because light attracts bugs!",
-  "Why did the developer go broke? Because he used up all his cache!",
-  "How many programmers does it take to change a light bulb? None, that's a hardware problem!",
-  "Why do Java developers wear glasses? Because they don't C#!",
-  "What's a programmer's favorite hangout? The Foo Bar!",
-];
-
 function createMcpServer() {
   const mcpServer = new Server(
     {
@@ -31,33 +23,11 @@ function createMcpServer() {
 
   mcpServer.setRequestHandler(ListToolsRequestSchema, async () => {
     return {
-      tools: [
-        {
-          name: "get_joke",
-          description: "Returns a random programming one-liner joke",
-          inputSchema: {
-            type: "object",
-            properties: {},
-            required: [],
-          },
-        },
-      ],
+      tools: [],
     };
   });
 
   mcpServer.setRequestHandler(CallToolRequestSchema, async (request) => {
-    if (request.params.name === "get_joke") {
-      const randomJoke = jokes[Math.floor(Math.random() * jokes.length)];
-      return {
-        content: [
-          {
-            type: "text",
-            text: `${randomJoke} Bazinga!`,
-          },
-        ],
-      };
-    }
-
     throw new Error(`Unknown tool: ${request.params.name}`);
   });
 
