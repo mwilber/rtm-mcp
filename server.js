@@ -1,4 +1,5 @@
 import { createMcpExpressApp } from "@modelcontextprotocol/sdk/server/express.js";
+import cors from "cors";
 import dotenv from "dotenv";
 import { registerMcpRoutes, runMcpStdio } from "./src/mcp.js";
 
@@ -8,6 +9,12 @@ const HOST = process.env.HOST || (process.env.DYNO ? "0.0.0.0" : "127.0.0.1");
 const app = createMcpExpressApp({ host: HOST });
 const PORT = process.env.PORT || 3000;
 const repoUrl = "https://github.com/mwilber/webmcptest";
+
+app.use(
+  cors({
+    exposedHeaders: ["mcp-session-id"],
+  })
+);
 
 // Health check endpoint
 app.get("/health", (req, res) => {
