@@ -182,6 +182,26 @@ function createMcpServer() {
             required: ["listId", "taskseriesId", "taskId", "dueDate"],
           },
         },
+        {
+          name: "rtm-search-tasks",
+          title: "RTM: Search Tasks",
+          description: "Search tasks by name, optionally filtered by tag.",
+          inputSchema: {
+            type: "object",
+            properties: {
+              query: {
+                type: "string",
+                minLength: 1,
+                description: "Search text to match task names.",
+              },
+              tag: {
+                type: "string",
+                description: "Optional Remember The Milk tag filter.",
+              },
+            },
+            required: ["query"],
+          },
+        },
       ],
     };
   });
@@ -284,6 +304,34 @@ function createMcpServer() {
         ],
         structuredContent: {
           success: true,
+        },
+      };
+    }
+
+    if (params.name === "rtm-search-tasks") {
+      const { query, tag } = args;
+      const client = resolveRtmClient();
+      const escapedQuery = String(query).replace(/"/g, '\\"');
+      const tasks = await client.listTasks({
+        filter: `name:"${escapedQuery}"`,
+        tag: tag || undefined,
+      });
+
+      const summary =
+        tasks.length === 0
+          ? "No tasks matched the search."
+          : tasks.slice(0, 10).map(formatTaskSummary).join("\n");
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: summary,
+          },
+        ],
+        structuredContent: {
+          total: tasks.length,
+          tasks,
         },
       };
     }
