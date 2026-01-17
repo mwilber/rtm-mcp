@@ -9,10 +9,34 @@ if (process.argv.includes("--rtm-debug")) {
   process.env.RTM_DEBUG = "1";
 }
 
+const USER_TOKEN = process.env.USER_TOKEN;
+if (!USER_TOKEN) {
+  throw new Error("USER_TOKEN must be set to enable request authentication.");
+}
+
 const HOST = process.env.HOST || (process.env.DYNO ? "0.0.0.0" : "127.0.0.1");
 const app = createMcpExpressApp({ host: HOST });
 const PORT = process.env.PORT || 5000;
 const repoUrl = "https://github.com/mwilber/webmcptest";
+
+const extractUserToken = (req) => {
+  const headerToken = req.headers["x-user-token"];
+  if (typeof headerToken === "string") return headerToken;
+  const auth = req.headers.authorization;
+  if (typeof auth === "string" && auth.startsWith("Bearer ")) {
+    return auth.slice("Bearer ".length);
+  }
+  return null;
+};
+
+app.use((req, res, next) => {
+  const token = extractUserToken(req);
+  if (token !== USER_TOKEN) {
+    res.status(401).json({ message: "user is not authenticated" });
+    return;
+  }
+  next();
+});
 
 app.use(
   cors({

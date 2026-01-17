@@ -25,6 +25,15 @@ The server defaults to port `5000` unless `PORT` is set.
 - `GET /health` -> `{ "status": "ok", "server": "webmcp-server" }`
 - `POST /mcp` -> MCP JSON-RPC 2.0 (session header on `initialize`)
 
+## Authentication (HTTP Only)
+
+Set `USER_TOKEN` in the environment and include it on every HTTP request:
+
+- `x-user-token: <token>` header, or
+- `Authorization: Bearer <token>` header
+
+Unauthorized requests return `{ "message": "user is not authenticated" }`.
+
 ### MCP Session Header
 
 The streamable HTTP MCP transport sets `mcp-session-id` in the `initialize` response. Subsequent requests must include it as a request header.
