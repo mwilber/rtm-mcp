@@ -18,7 +18,7 @@ Node.js MCP server with streamable HTTP and stdio transports.
    npm run dev
    ```
 
-The server defaults to port `3000` unless `PORT` is set.
+The server defaults to port `5000` unless `PORT` is set.
 
 ## Endpoints
 
