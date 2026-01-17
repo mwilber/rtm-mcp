@@ -3,20 +3,11 @@
 ## Project Context
 - Node.js MCP server with HTTP and stdio transports.
 - Main entry point: `server.js`.
-- MCP endpoint is mounted at `/mcp` and proxy chat endpoint at `/proxy`.
-- ChartIQ chat sample lives in `client/` and uses `chartiq-registry-api.js`.
-- Proxy server code now lives in `src/proxy.js` and reads prompts from `src/proxy/`.
+- MCP endpoint is mounted at `/mcp`.
 
 ## Development Notes
 - Prefer `npm run dev` for local iteration.
 - Keep tool definitions and handlers in sync when adding new tools.
-- Proxy server uses `src/proxy/prompt_tools.txt` when tools are provided and `src/proxy/prompt_json.txt` otherwise.
-- Proxy JSON prompt must instruct the model to return a JSON object with `message` and `cmd` fields; otherwise the proxy can error.
-- TODO: Handle LLM responses that do not conform to the `{"message": "...", "cmd": []}` shape.
-- Proxy requires `AI_API_KEY` from the environment; local dev uses `.env` (gitignored) and Heroku uses config vars.
-- Client MCP wiring lives in `client/js/mcp-client.js` with config in `client/js/mcp-config.js`; MCP tool execution is client-side.
-- MCP config supports local and remote URLs (remote currently active); client parses SSE responses from the MCP server.
-- Tool routing flags exist via `toolRouting.serverTools` in `client/js/mcp-config.js` (current tools are client-side only).
 
 ## Git Commit Messages
 - Format:
