@@ -154,6 +154,34 @@ function createMcpServer() {
             properties: {},
           },
         },
+        {
+          name: "rtm-set-due-date",
+          title: "RTM: Set Due Date",
+          description: "Update a task's due date.",
+          inputSchema: {
+            type: "object",
+            properties: {
+              listId: {
+                type: "string",
+                description: "Task list identifier.",
+              },
+              taskseriesId: {
+                type: "string",
+                description: "Task series identifier.",
+              },
+              taskId: {
+                type: "string",
+                description: "Task identifier.",
+              },
+              dueDate: {
+                type: "string",
+                description:
+                  'Natural language or ISO due date, e.g., "next Tuesday 5pm" or "2025-10-31".',
+              },
+            },
+            required: ["listId", "taskseriesId", "taskId", "dueDate"],
+          },
+        },
       ],
     };
   });
@@ -238,6 +266,24 @@ function createMcpServer() {
         structuredContent: {
           total: tasks.length,
           tasks,
+        },
+      };
+    }
+
+    if (params.name === "rtm-set-due-date") {
+      const { listId, taskseriesId, taskId, dueDate } = args;
+      const client = resolveRtmClient();
+      await client.setDueDate({ listId, taskseriesId, taskId, dueDate });
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: "Updated task due date.",
+          },
+        ],
+        structuredContent: {
+          success: true,
         },
       };
     }

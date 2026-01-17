@@ -230,4 +230,23 @@ export class RTMClient {
       id: { list: path.list_id, series: path.taskseries_id, task: path.task_id },
     };
   }
+
+  async setDueDate({ listId, taskseriesId, taskId, dueDate }) {
+    if (!listId || !taskseriesId || !taskId) {
+      throw new Error("listId, taskseriesId, and taskId are required");
+    }
+
+    const timeline = await this.#createTimeline();
+    await this.#request("rtm.tasks.setDueDate", {
+      list_id: listId,
+      taskseries_id: taskseriesId,
+      task_id: taskId,
+      timeline,
+      due: dueDate || "",
+      parse: 1,
+      has_due_time: /\d{1,2}:\d{2}/.test(dueDate || "") ? 1 : 0,
+    });
+
+    return { success: true };
+  }
 }
