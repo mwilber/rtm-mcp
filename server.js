@@ -19,6 +19,12 @@ const app = createMcpExpressApp({ host: HOST });
 const PORT = process.env.PORT || 5000;
 const repoUrl = "https://github.com/mwilber/rtm-mcp";
 
+app.use(
+  cors({
+    exposedHeaders: ["mcp-session-id"],
+  })
+);
+
 const extractUserToken = (req) => {
   const headerToken = req.headers["x-user-token"];
   if (typeof headerToken === "string") return headerToken;
@@ -41,12 +47,6 @@ app.use((req, res, next) => {
   }
   next();
 });
-
-app.use(
-  cors({
-    exposedHeaders: ["mcp-session-id"],
-  })
-);
 
 // Health check endpoint
 app.get("/health", (req, res) => {
