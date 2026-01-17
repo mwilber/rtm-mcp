@@ -5,6 +5,10 @@ import { registerMcpRoutes, runMcpStdio } from "./src/mcp.js";
 
 dotenv.config();
 
+if (process.argv.includes("--rtm-debug")) {
+  process.env.RTM_DEBUG = "1";
+}
+
 const HOST = process.env.HOST || (process.env.DYNO ? "0.0.0.0" : "127.0.0.1");
 const app = createMcpExpressApp({ host: HOST });
 const PORT = process.env.PORT || 5000;

@@ -6,6 +6,7 @@ export class RTMClient {
     sharedSecret,
     authToken,
     baseUrl = "https://api.rememberthemilk.com/services/rest/",
+    debug = false,
   }) {
     if (!apiKey || !sharedSecret || !authToken) {
       throw new Error("apiKey, sharedSecret, and authToken are required");
@@ -14,6 +15,7 @@ export class RTMClient {
     this.sharedSecret = sharedSecret;
     this.authToken = authToken;
     this.baseUrl = baseUrl;
+    this.debug = debug;
   }
 
   #signParams(params) {
@@ -44,6 +46,10 @@ export class RTMClient {
     if (data.rsp.stat !== "ok") {
       const err = data.rsp.err || {};
       throw new Error(`RTM error ${err.code ?? ""}: ${err.msg ?? "Unknown"}`);
+    }
+    if (this.debug) {
+      const pretty = JSON.stringify(data.rsp, null, 2);
+      console.log(`[rtm-mcp] RTM response for ${methodName}:\n${pretty}`);
     }
     return data.rsp;
   }
@@ -80,8 +86,12 @@ export class RTMClient {
     return null;
   }
 
-  async listTasks({ dueDate, tag } = {}) {
+  async listTasks({ dueDate, tag, filter } = {}) {
     const filterParts = [];
+
+    if (filter) {
+      filterParts.push(filter);
+    }
 
     if (typeof dueDate === "string") {
       filterParts.push(`due:${dueDate}`);
@@ -94,14 +104,17 @@ export class RTMClient {
       filterParts.push(`tag:${tag}`);
     }
 
-    const filter =
+    const filterQuery =
       filterParts.length === 0
         ? undefined
         : filterParts.length === 1
         ? filterParts[0]
         : `(${filterParts.join(" AND ")})`;
 
-    const rsp = await this.#request("rtm.tasks.getList", filter ? { filter } : {});
+    const rsp = await this.#request(
+      "rtm.tasks.getList",
+      filterQuery ? { filter: filterQuery } : {}
+    );
     const results = [];
 
     const lists = rsp?.tasks?.list;

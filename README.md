@@ -37,6 +37,7 @@ Tools are defined in `src/mcp.js`. Keep tool definitions in sync with handlers w
 
 - `npm run dev` for auto-reload
 - `npm start` for a basic server start
+- Add `--rtm-debug` to log RTM API responses in pretty JSON.
 
 ## Deployment (Heroku)
 

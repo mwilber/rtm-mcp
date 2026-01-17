@@ -10,6 +10,10 @@ import {
 import { RTMClient } from "./rtm-client.js";
 
 const REQUIRED_RTM_ENV = ["RTM_API_KEY", "RTM_SHARED_SECRET", "RTM_AUTH_TOKEN"];
+const isRtmDebugEnabled = () =>
+  process.env.RTM_DEBUG === "1" ||
+  process.env.RTM_DEBUG === "true" ||
+  process.argv.includes("--rtm-debug");
 
 const createRtmClient = () => {
   const missing = REQUIRED_RTM_ENV.filter((key) => !process.env[key]);
@@ -25,6 +29,7 @@ const createRtmClient = () => {
     apiKey: process.env.RTM_API_KEY,
     sharedSecret: process.env.RTM_SHARED_SECRET,
     authToken: process.env.RTM_AUTH_TOKEN,
+    debug: isRtmDebugEnabled(),
   });
 };
 
@@ -139,6 +144,16 @@ function createMcpServer() {
             required: ["name"],
           },
         },
+        {
+          name: "rtm-list-unwatched-movies",
+          title: "RTM: List Unwatched Movies",
+          description:
+            'Fetch incomplete tasks tagged "movie" with no due date.',
+          inputSchema: {
+            type: "object",
+            properties: {},
+          },
+        },
       ],
     };
   });
@@ -199,6 +214,31 @@ function createMcpServer() {
           },
         ],
         structuredContent: result,
+      };
+    }
+
+    if (params.name === "rtm-list-unwatched-movies") {
+      const client = resolveRtmClient();
+      const tasks = await client.listTasks({
+        filter: "tag:movie AND status:incomplete AND due:never",
+      });
+
+      const summary =
+        tasks.length === 0
+          ? "No unwatched movies found."
+          : tasks.slice(0, 10).map(formatTaskSummary).join("\n");
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: summary,
+          },
+        ],
+        structuredContent: {
+          total: tasks.length,
+          tasks,
+        },
       };
     }
 
