@@ -17,7 +17,7 @@ if (!USER_TOKEN) {
 const HOST = process.env.HOST || (process.env.DYNO ? "0.0.0.0" : "127.0.0.1");
 const app = createMcpExpressApp({ host: HOST });
 const PORT = process.env.PORT || 5000;
-const repoUrl = "https://github.com/mwilber/webmcptest";
+const repoUrl = "https://github.com/mwilber/rtm-mcp";
 
 const extractUserToken = (req) => {
   const headerToken = req.headers["x-user-token"];
@@ -30,6 +30,10 @@ const extractUserToken = (req) => {
 };
 
 app.use((req, res, next) => {
+  if (req.path === "/") {
+    next();
+    return;
+  }
   const token = extractUserToken(req);
   if (token !== USER_TOKEN) {
     res.status(401).json({ message: "user is not authenticated" });
@@ -55,7 +59,7 @@ app.get("/", (req, res) => {
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>WebMCP Server</title>
+    <title>RTM MCP Server</title>
     <style>
       :root {
         color-scheme: light;
@@ -102,10 +106,10 @@ app.get("/", (req, res) => {
   <body>
     <main>
       <div class="card">
-        <h1>WebMCP Server</h1>
+        <h1>RTM MCP Server</h1>
         <p>
-          This service exposes a Model Context Protocol server with HTTP and
-          stdio transports, designed to plug into MCP-capable clients.
+          This service exposes a Remember The Milk MCP server with HTTP and
+          stdio transports for task management.
         </p>
         <p>
           Repo: <a href="${repoUrl}">${repoUrl}</a>
