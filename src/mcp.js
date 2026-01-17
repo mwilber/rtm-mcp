@@ -77,7 +77,7 @@ function createMcpServer() {
           name: "rtm-list-tasks",
           title: "RTM: List Tasks",
           description:
-            "Fetch tasks from Remember The Milk filtered by due date and tag.",
+            "Fetch incomplete tasks from Remember The Milk filtered by due date and tag.",
           inputSchema: {
             type: "object",
             properties: {
@@ -185,7 +185,8 @@ function createMcpServer() {
         {
           name: "rtm-search-tasks",
           title: "RTM: Search Tasks",
-          description: "Search tasks by name, optionally filtered by tag.",
+          description:
+            "Search incomplete tasks by name, optionally filtered by tag.",
           inputSchema: {
             type: "object",
             properties: {
@@ -197,6 +198,10 @@ function createMcpServer() {
               tag: {
                 type: "string",
                 description: "Optional Remember The Milk tag filter.",
+              },
+              includeCompleted: {
+                type: "boolean",
+                description: "Return completed tasks as well.",
               },
             },
             required: ["query"],
@@ -221,6 +226,7 @@ function createMcpServer() {
       const tasks = await client.listTasks({
         dueDate: dueDate ?? dueRange,
         tag: tag || undefined,
+        filter: "status:incomplete",
       });
 
       const summary =
@@ -309,11 +315,16 @@ function createMcpServer() {
     }
 
     if (params.name === "rtm-search-tasks") {
-      const { query, tag } = args;
+      const { query, tag, includeCompleted = false } = args;
       const client = resolveRtmClient();
       const escapedQuery = String(query).replace(/"/g, '\\"');
+      const statusFilter = includeCompleted ? null : "status:incomplete";
+      const filterParts = [`name:\"${escapedQuery}\"`];
+      if (statusFilter) {
+        filterParts.push(statusFilter);
+      }
       const tasks = await client.listTasks({
-        filter: `name:"${escapedQuery}"`,
+        filter: filterParts.join(" AND "),
         tag: tag || undefined,
       });
 
