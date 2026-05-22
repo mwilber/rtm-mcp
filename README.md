@@ -65,6 +65,7 @@ Parameters:
 - `repeats` (string, optional): Recurrence pattern such as "every week".
 - `priority` (integer, optional): `1` (high), `2`, or `3`.
 - `tags` (string[], optional): List of tags to apply.
+- `note` (string, optional): Note body to attach to the created task. The RTM note title is fixed to `AI Generated Note`.
 - `mode` (string, optional): `smart` (default) or `explicit` for Smart Add vs explicit updates.
 
 ### `rtm-list-unwatched-movies`

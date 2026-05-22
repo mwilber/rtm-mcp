@@ -3,6 +3,7 @@ import crypto from "node:crypto";
 const SIMPLE_FILTER_VALUE = /^[A-Za-z0-9_.:-]+$/;
 const DUE_TIME_PATTERN = /\b(?:\d{1,2}:\d{2}|\d{1,2}\s*(?:am|pm))\b/i;
 const REQUIRED_CREATED_TASK_TAG = "AI";
+const AI_NOTE_TITLE = "AI Generated Note";
 
 export function quoteFilterValue(value) {
   const normalized = String(value ?? "").trim();
@@ -202,7 +203,7 @@ export class RTMClient {
     return results;
   }
 
-  async addTask({ name, dueDate, repeats, priority, tags, mode = "smart" }) {
+  async addTask({ name, dueDate, repeats, priority, tags, note, mode = "smart" }) {
     if (!name) throw new Error("name is required");
 
     const timeline = await this.#createTimeline();
@@ -223,6 +224,7 @@ export class RTMClient {
 
       const path = this.#extractTaskPath(rsp);
       if (!path) throw new Error("Could not parse task path from add response");
+      await this.#addNote({ path, timeline, note });
       return {
         success: true,
         id: { list: path.list_id, series: path.taskseries_id, task: path.task_id },
@@ -268,10 +270,28 @@ export class RTMClient {
       tags: taskTags.join(","),
     });
 
+    await this.#addNote({ path, timeline, note });
+
     return {
       success: true,
       id: { list: path.list_id, series: path.taskseries_id, task: path.task_id },
     };
+  }
+
+  async #addNote({ path, timeline, note }) {
+    const noteText = String(note ?? "").trim();
+    if (!noteText) {
+      return;
+    }
+
+    await this.#request("rtm.tasks.notes.add", {
+      list_id: path.list_id,
+      taskseries_id: path.taskseries_id,
+      task_id: path.task_id,
+      timeline,
+      note_title: AI_NOTE_TITLE,
+      note_text: noteText,
+    });
   }
 
   async setDueDate({ listId, taskseriesId, taskId, dueDate }) {

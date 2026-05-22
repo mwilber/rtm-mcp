@@ -172,6 +172,53 @@ describe("RTMClient", () => {
     assert.equal(getParams(requests[1]).get("name"), "Draft plan #work #AI");
   });
 
+  it("adds an optional note after smart add creates the task", async () => {
+    const requests = [];
+    globalThis.fetch = async (url) => {
+      requests.push(url);
+
+      if (requests.length === 1) {
+        return okResponse({ timeline: "timeline-1" });
+      }
+
+      if (requests.length === 2) {
+        return okResponse({
+          list: {
+            id: "list-1",
+            taskseries: {
+              id: "series-1",
+              task: { id: "task-1" },
+            },
+          },
+        });
+      }
+
+      return okResponse({
+        note: {
+          id: "note-1",
+          title: "AI Generated Note",
+          $t: "Bring the Q2 numbers.",
+        },
+      });
+    };
+
+    await makeClient().addTask({
+      name: "Draft plan",
+      note: "Bring the Q2 numbers.",
+      mode: "smart",
+    });
+
+    assert.equal(requests.length, 3);
+    const noteParams = getParams(requests[2]);
+    assert.equal(noteParams.get("method"), "rtm.tasks.notes.add");
+    assert.equal(noteParams.get("list_id"), "list-1");
+    assert.equal(noteParams.get("taskseries_id"), "series-1");
+    assert.equal(noteParams.get("task_id"), "task-1");
+    assert.equal(noteParams.get("timeline"), "timeline-1");
+    assert.equal(noteParams.get("note_title"), "AI Generated Note");
+    assert.equal(noteParams.get("note_text"), "Bring the Q2 numbers.");
+  });
+
   it("adds the required AI tag through explicit add", async () => {
     const requests = [];
     globalThis.fetch = async (url) => {
@@ -205,5 +252,47 @@ describe("RTMClient", () => {
     assert.equal(requests.length, 3);
     assert.equal(getParams(requests[2]).get("method"), "rtm.tasks.addTags");
     assert.equal(getParams(requests[2]).get("tags"), "work,AI");
+  });
+
+  it("adds an optional note after explicit add updates the task", async () => {
+    const requests = [];
+    globalThis.fetch = async (url) => {
+      requests.push(url);
+
+      if (requests.length === 1) {
+        return okResponse({ timeline: "timeline-1" });
+      }
+
+      if (requests.length === 2) {
+        return okResponse({
+          list: {
+            id: "list-1",
+            taskseries: {
+              id: "series-1",
+              task: { id: "task-1" },
+            },
+          },
+        });
+      }
+
+      return okResponse({});
+    };
+
+    await makeClient().addTask({
+      name: "Draft plan",
+      note: "Bring the Q2 numbers.",
+      mode: "explicit",
+    });
+
+    assert.equal(requests.length, 4);
+    assert.equal(getParams(requests[2]).get("method"), "rtm.tasks.addTags");
+    const noteParams = getParams(requests[3]);
+    assert.equal(noteParams.get("method"), "rtm.tasks.notes.add");
+    assert.equal(noteParams.get("list_id"), "list-1");
+    assert.equal(noteParams.get("taskseries_id"), "series-1");
+    assert.equal(noteParams.get("task_id"), "task-1");
+    assert.equal(noteParams.get("timeline"), "timeline-1");
+    assert.equal(noteParams.get("note_title"), "AI Generated Note");
+    assert.equal(noteParams.get("note_text"), "Bring the Q2 numbers.");
   });
 });

@@ -134,6 +134,11 @@ function createMcpServer() {
                 maxItems: 10,
                 description: "List of tags to apply.",
               },
+              note: {
+                type: "string",
+                description:
+                  'Optional note body to attach to the created task. Uses the fixed RTM note title "AI Generated Note".',
+              },
               mode: {
                 type: "string",
                 enum: ["smart", "explicit"],
@@ -249,7 +254,7 @@ function createMcpServer() {
     }
 
     if (params.name === "rtm-add-task") {
-      const { name, dueDate, repeats, priority, tags, mode = "smart" } = args;
+      const { name, dueDate, repeats, priority, tags, note, mode = "smart" } = args;
       const client = resolveRtmClient();
       const result = await client.addTask({
         name,
@@ -257,6 +262,7 @@ function createMcpServer() {
         repeats: repeats || undefined,
         priority: priority || undefined,
         tags: tags || undefined,
+        note: note || undefined,
         mode,
       });
 
