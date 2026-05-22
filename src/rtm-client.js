@@ -4,6 +4,9 @@ const SIMPLE_FILTER_VALUE = /^[A-Za-z0-9_.:-]+$/;
 const DUE_TIME_PATTERN = /\b(?:\d{1,2}:\d{2}|\d{1,2}\s*(?:am|pm))\b/i;
 const REQUIRED_CREATED_TASK_TAG = "AI";
 const AI_NOTE_TITLE = "AI Generated Note";
+const DEFAULT_CREATED_TASK_DUE_DATE = "today";
+const MAX_CREATED_TASK_YEARS_AHEAD = 2;
+const ISO_DATE_ONLY_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
 
 export function quoteFilterValue(value) {
   const normalized = String(value ?? "").trim();
@@ -67,6 +70,53 @@ export function ensureCreatedTaskTags(tags) {
   }
 
   return normalizedTags;
+}
+
+function startOfLocalDay(date) {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+}
+
+function parseDueDateCandidate(value) {
+  const dueDate = String(value ?? "").trim();
+  const isoDateOnlyMatch = dueDate.match(ISO_DATE_ONLY_PATTERN);
+  if (isoDateOnlyMatch) {
+    const [, year, month, day] = isoDateOnlyMatch;
+    const parsed = new Date(Number(year), Number(month) - 1, Number(day));
+    if (
+      parsed.getFullYear() === Number(year) &&
+      parsed.getMonth() === Number(month) - 1 &&
+      parsed.getDate() === Number(day)
+    ) {
+      return parsed;
+    }
+    return null;
+  }
+
+  const timestamp = Date.parse(dueDate);
+  return Number.isNaN(timestamp) ? null : new Date(timestamp);
+}
+
+export function normalizeCreatedTaskDueDate(dueDate, now = new Date()) {
+  const normalizedDueDate = String(dueDate ?? "").trim();
+  if (!normalizedDueDate) {
+    return DEFAULT_CREATED_TASK_DUE_DATE;
+  }
+
+  const parsedDueDate = parseDueDateCandidate(normalizedDueDate);
+  if (!parsedDueDate) {
+    return normalizedDueDate;
+  }
+
+  const today = startOfLocalDay(now);
+  const maxDueDate = new Date(today);
+  maxDueDate.setFullYear(maxDueDate.getFullYear() + MAX_CREATED_TASK_YEARS_AHEAD);
+  const parsedDueDay = startOfLocalDay(parsedDueDate);
+
+  if (parsedDueDay < today || parsedDueDay > maxDueDate) {
+    return DEFAULT_CREATED_TASK_DUE_DATE;
+  }
+
+  return normalizedDueDate;
 }
 
 export class RTMClient {
@@ -208,10 +258,11 @@ export class RTMClient {
 
     const timeline = await this.#createTimeline();
     const taskTags = ensureCreatedTaskTags(tags);
+    const taskDueDate = normalizeCreatedTaskDueDate(dueDate);
 
     if (mode === "smart") {
       const bits = [name];
-      if (dueDate) bits.push("^" + dueDate);
+      bits.push("^" + taskDueDate);
       if (repeats) bits.push("*" + repeats);
       if (priority) bits.push("!" + priority);
       bits.push(taskTags.map((tag) => "#" + tag).join(" "));
@@ -242,14 +293,12 @@ export class RTMClient {
       timeline,
     };
 
-    if (dueDate) {
-      await this.#request("rtm.tasks.setDueDate", {
-        ...basePath,
-        due: dueDate,
-        parse: 1,
-        has_due_time: hasDueTime(dueDate) ? 1 : 0,
-      });
-    }
+    await this.#request("rtm.tasks.setDueDate", {
+      ...basePath,
+      due: taskDueDate,
+      parse: 1,
+      has_due_time: hasDueTime(taskDueDate) ? 1 : 0,
+    });
 
     if (repeats) {
       await this.#request("rtm.tasks.setRecurrence", {

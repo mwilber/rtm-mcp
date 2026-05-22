@@ -117,7 +117,7 @@ function createMcpServer() {
               dueDate: {
                 type: "string",
                 description:
-                  'Natural language or ISO due date, e.g., "next Tuesday 5pm" or "2025-10-31".',
+                  'Natural language or ISO due date, e.g., "tomorrow", "never", or "2025-10-31". Defaults to "today"; parseable dates outside today through two years ahead are reset to "today".',
               },
               repeats: {
                 type: "string",

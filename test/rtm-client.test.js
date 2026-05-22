@@ -4,6 +4,7 @@ import {
   buildTaskFilter,
   ensureCreatedTaskTags,
   hasDueTime,
+  normalizeCreatedTaskDueDate,
   quoteFilterValue,
   RTMClient,
 } from "../src/rtm-client.js";
@@ -21,6 +22,7 @@ const makeClient = () =>
   });
 
 const getParams = (url) => new URL(url).searchParams;
+const fixedNow = new Date(2026, 4, 22, 12);
 
 afterEach(() => {
   delete globalThis.fetch;
@@ -58,6 +60,20 @@ describe("RTM filter helpers", () => {
     assert.deepEqual(ensureCreatedTaskTags(), ["AI"]);
     assert.deepEqual(ensureCreatedTaskTags(["work", "AI"]), ["work", "AI"]);
     assert.deepEqual(ensureCreatedTaskTags(["work", ""]), ["work", "AI"]);
+  });
+
+  it("normalizes missing and out-of-range created task due dates", () => {
+    assert.equal(normalizeCreatedTaskDueDate(undefined, fixedNow), "today");
+    assert.equal(normalizeCreatedTaskDueDate("", fixedNow), "today");
+    assert.equal(normalizeCreatedTaskDueDate("2026-05-21", fixedNow), "today");
+    assert.equal(normalizeCreatedTaskDueDate("2028-05-23", fixedNow), "today");
+  });
+
+  it("preserves natural due dates and parseable dates in range", () => {
+    assert.equal(normalizeCreatedTaskDueDate("tomorrow", fixedNow), "tomorrow");
+    assert.equal(normalizeCreatedTaskDueDate("never", fixedNow), "never");
+    assert.equal(normalizeCreatedTaskDueDate("2026-05-22", fixedNow), "2026-05-22");
+    assert.equal(normalizeCreatedTaskDueDate("2028-05-22", fixedNow), "2028-05-22");
   });
 });
 
@@ -169,7 +185,37 @@ describe("RTMClient", () => {
 
     assert.equal(requests.length, 2);
     assert.equal(getParams(requests[1]).get("method"), "rtm.tasks.add");
-    assert.equal(getParams(requests[1]).get("name"), "Draft plan #work #AI");
+    assert.equal(getParams(requests[1]).get("name"), "Draft plan ^today #work #AI");
+  });
+
+  it("defaults missing smart add due dates to today", async () => {
+    const requests = [];
+    globalThis.fetch = async (url) => {
+      requests.push(url);
+
+      if (requests.length === 1) {
+        return okResponse({ timeline: "timeline-1" });
+      }
+
+      return okResponse({
+        list: {
+          id: "list-1",
+          taskseries: {
+            id: "series-1",
+            task: { id: "task-1" },
+          },
+        },
+      });
+    };
+
+    await makeClient().addTask({
+      name: "Draft plan",
+      mode: "smart",
+    });
+
+    assert.equal(requests.length, 2);
+    assert.equal(getParams(requests[1]).get("method"), "rtm.tasks.add");
+    assert.equal(getParams(requests[1]).get("name"), "Draft plan ^today #AI");
   });
 
   it("adds an optional note after smart add creates the task", async () => {
@@ -249,9 +295,47 @@ describe("RTMClient", () => {
       mode: "explicit",
     });
 
-    assert.equal(requests.length, 3);
-    assert.equal(getParams(requests[2]).get("method"), "rtm.tasks.addTags");
-    assert.equal(getParams(requests[2]).get("tags"), "work,AI");
+    assert.equal(requests.length, 4);
+    assert.equal(getParams(requests[2]).get("method"), "rtm.tasks.setDueDate");
+    assert.equal(getParams(requests[2]).get("due"), "today");
+    assert.equal(getParams(requests[3]).get("method"), "rtm.tasks.addTags");
+    assert.equal(getParams(requests[3]).get("tags"), "work,AI");
+  });
+
+  it("uses today for out-of-range explicit add due dates", async () => {
+    const requests = [];
+    globalThis.fetch = async (url) => {
+      requests.push(url);
+
+      if (requests.length === 1) {
+        return okResponse({ timeline: "timeline-1" });
+      }
+
+      if (requests.length === 2) {
+        return okResponse({
+          list: {
+            id: "list-1",
+            taskseries: {
+              id: "series-1",
+              task: { id: "task-1" },
+            },
+          },
+        });
+      }
+
+      return okResponse({});
+    };
+
+    await makeClient().addTask({
+      name: "Draft plan",
+      dueDate: "1900-01-01",
+      mode: "explicit",
+    });
+
+    assert.equal(requests.length, 4);
+    const dueDateParams = getParams(requests[2]);
+    assert.equal(dueDateParams.get("method"), "rtm.tasks.setDueDate");
+    assert.equal(dueDateParams.get("due"), "today");
   });
 
   it("adds an optional note after explicit add updates the task", async () => {
@@ -284,9 +368,10 @@ describe("RTMClient", () => {
       mode: "explicit",
     });
 
-    assert.equal(requests.length, 4);
-    assert.equal(getParams(requests[2]).get("method"), "rtm.tasks.addTags");
-    const noteParams = getParams(requests[3]);
+    assert.equal(requests.length, 5);
+    assert.equal(getParams(requests[2]).get("method"), "rtm.tasks.setDueDate");
+    assert.equal(getParams(requests[3]).get("method"), "rtm.tasks.addTags");
+    const noteParams = getParams(requests[4]);
     assert.equal(noteParams.get("method"), "rtm.tasks.notes.add");
     assert.equal(noteParams.get("list_id"), "list-1");
     assert.equal(noteParams.get("taskseries_id"), "series-1");

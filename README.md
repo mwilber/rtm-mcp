@@ -61,7 +61,7 @@ Create a task with optional due date, recurrence, priority, and tags.
 
 Parameters:
 - `name` (string, required): Task name.
-- `dueDate` (string, optional): Natural language or ISO due date, e.g., "next Tuesday 5pm" or "2025-10-31".
+- `dueDate` (string, optional): Natural language or ISO due date, e.g., "tomorrow", "never", or "2025-10-31". Defaults to `today`; parseable dates outside today through two years ahead are reset to `today`.
 - `repeats` (string, optional): Recurrence pattern such as "every week".
 - `priority` (integer, optional): `1` (high), `2`, or `3`.
 - `tags` (string[], optional): List of tags to apply.
