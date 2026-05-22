@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { afterEach, describe, it } from "node:test";
 import {
   buildTaskFilter,
+  ensureCreatedTaskTags,
   hasDueTime,
   quoteFilterValue,
   RTMClient,
@@ -51,6 +52,12 @@ describe("RTM filter helpers", () => {
     assert.equal(hasDueTime("2026-05-22 17:30"), true);
     assert.equal(hasDueTime("next Tuesday 5pm"), true);
     assert.equal(hasDueTime("next Tuesday"), false);
+  });
+
+  it("ensures created tasks include the required AI tag", () => {
+    assert.deepEqual(ensureCreatedTaskTags(), ["AI"]);
+    assert.deepEqual(ensureCreatedTaskTags(["work", "AI"]), ["work", "AI"]);
+    assert.deepEqual(ensureCreatedTaskTags(["work", ""]), ["work", "AI"]);
   });
 });
 
@@ -126,9 +133,77 @@ describe("RTMClient", () => {
       mode: "explicit",
     });
 
-    assert.equal(requests.length, 3);
+    assert.equal(requests.length, 4);
     const dueDateParams = getParams(requests[2]);
     assert.equal(dueDateParams.get("method"), "rtm.tasks.setDueDate");
     assert.equal(dueDateParams.get("has_due_time"), "1");
+    assert.equal(getParams(requests[3]).get("method"), "rtm.tasks.addTags");
+    assert.equal(getParams(requests[3]).get("tags"), "AI");
+  });
+
+  it("adds the required AI tag through smart add", async () => {
+    const requests = [];
+    globalThis.fetch = async (url) => {
+      requests.push(url);
+
+      if (requests.length === 1) {
+        return okResponse({ timeline: "timeline-1" });
+      }
+
+      return okResponse({
+        list: {
+          id: "list-1",
+          taskseries: {
+            id: "series-1",
+            task: { id: "task-1" },
+          },
+        },
+      });
+    };
+
+    await makeClient().addTask({
+      name: "Draft plan",
+      tags: ["work"],
+      mode: "smart",
+    });
+
+    assert.equal(requests.length, 2);
+    assert.equal(getParams(requests[1]).get("method"), "rtm.tasks.add");
+    assert.equal(getParams(requests[1]).get("name"), "Draft plan #work #AI");
+  });
+
+  it("adds the required AI tag through explicit add", async () => {
+    const requests = [];
+    globalThis.fetch = async (url) => {
+      requests.push(url);
+
+      if (requests.length === 1) {
+        return okResponse({ timeline: "timeline-1" });
+      }
+
+      if (requests.length === 2) {
+        return okResponse({
+          list: {
+            id: "list-1",
+            taskseries: {
+              id: "series-1",
+              task: { id: "task-1" },
+            },
+          },
+        });
+      }
+
+      return okResponse({});
+    };
+
+    await makeClient().addTask({
+      name: "Draft plan",
+      tags: ["work"],
+      mode: "explicit",
+    });
+
+    assert.equal(requests.length, 3);
+    assert.equal(getParams(requests[2]).get("method"), "rtm.tasks.addTags");
+    assert.equal(getParams(requests[2]).get("tags"), "work,AI");
   });
 });

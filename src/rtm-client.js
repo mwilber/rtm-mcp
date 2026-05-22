@@ -2,6 +2,7 @@ import crypto from "node:crypto";
 
 const SIMPLE_FILTER_VALUE = /^[A-Za-z0-9_.:-]+$/;
 const DUE_TIME_PATTERN = /\b(?:\d{1,2}:\d{2}|\d{1,2}\s*(?:am|pm))\b/i;
+const REQUIRED_CREATED_TASK_TAG = "AI";
 
 export function quoteFilterValue(value) {
   const normalized = String(value ?? "").trim();
@@ -53,6 +54,18 @@ export function buildTaskFilter({ dueDate, tag, filter } = {}) {
   return filterParts.length === 1
     ? filterParts[0]
     : `(${filterParts.join(" AND ")})`;
+}
+
+export function ensureCreatedTaskTags(tags) {
+  const normalizedTags = Array.isArray(tags)
+    ? tags.map((tag) => String(tag).trim()).filter(Boolean)
+    : [];
+
+  if (!normalizedTags.includes(REQUIRED_CREATED_TASK_TAG)) {
+    normalizedTags.push(REQUIRED_CREATED_TASK_TAG);
+  }
+
+  return normalizedTags;
 }
 
 export class RTMClient {
@@ -193,15 +206,14 @@ export class RTMClient {
     if (!name) throw new Error("name is required");
 
     const timeline = await this.#createTimeline();
+    const taskTags = ensureCreatedTaskTags(tags);
 
     if (mode === "smart") {
       const bits = [name];
       if (dueDate) bits.push("^" + dueDate);
       if (repeats) bits.push("*" + repeats);
       if (priority) bits.push("!" + priority);
-      if (Array.isArray(tags) && tags.length) {
-        bits.push(tags.map((tag) => "#" + tag).join(" "));
-      }
+      bits.push(taskTags.map((tag) => "#" + tag).join(" "));
 
       const rsp = await this.#request("rtm.tasks.add", {
         name: bits.join(" "),
@@ -251,12 +263,10 @@ export class RTMClient {
       });
     }
 
-    if (Array.isArray(tags) && tags.length) {
-      await this.#request("rtm.tasks.addTags", {
-        ...basePath,
-        tags: tags.join(","),
-      });
-    }
+    await this.#request("rtm.tasks.addTags", {
+      ...basePath,
+      tags: taskTags.join(","),
+    });
 
     return {
       success: true,
