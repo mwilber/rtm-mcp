@@ -7,7 +7,7 @@ import {
   ListToolsRequestSchema,
   isInitializeRequest,
 } from "@modelcontextprotocol/sdk/types.js";
-import { RTMClient } from "./rtm-client.js";
+import { quoteFilterValue, RTMClient } from "./rtm-client.js";
 
 const REQUIRED_RTM_ENV = ["RTM_API_KEY", "RTM_SHARED_SECRET", "RTM_AUTH_TOKEN"];
 const isRtmDebugEnabled = () =>
@@ -317,9 +317,8 @@ function createMcpServer() {
     if (params.name === "rtm-search-tasks") {
       const { query, tag, includeCompleted = false } = args;
       const client = resolveRtmClient();
-      const escapedQuery = String(query).replace(/"/g, '\\"');
       const statusFilter = includeCompleted ? null : "status:incomplete";
-      const filterParts = [`name:\"${escapedQuery}\"`];
+      const filterParts = [`name:${quoteFilterValue(query)}`];
       if (statusFilter) {
         filterParts.push(statusFilter);
       }

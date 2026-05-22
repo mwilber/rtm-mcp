@@ -1,4 +1,4 @@
-# WebMCP - Remote MCP Server
+# RTM MCP Server
 
 Node.js MCP server with streamable HTTP and stdio transports.
 
@@ -13,7 +13,9 @@ Node.js MCP server with streamable HTTP and stdio transports.
    npm install
    ```
 
-2. Start the server (preferred for local iteration):
+2. Create a local `.env` from `.env.example` and fill in the RTM credentials plus `USER_TOKEN`.
+
+3. Start the server (preferred for local iteration):
    ```bash
    npm run dev
    ```
@@ -22,17 +24,18 @@ The server defaults to port `5000` unless `PORT` is set.
 
 ## Endpoints
 
-- `GET /health` -> `{ "status": "ok", "server": "webmcp-server" }`
+- `GET /health` -> `{ "status": "ok", "server": "rtm-mcp" }`
 - `POST /mcp` -> MCP JSON-RPC 2.0 (session header on `initialize`)
 
 ## Authentication (HTTP Only)
 
-Set `USER_TOKEN` in the environment and include it on every HTTP request:
+Set `USER_TOKEN` in the environment and include it on every HTTP MCP request:
 
 - `x-user-token: <token>` header, or
 - `Authorization: Bearer <token>` header
 
 Unauthorized requests return `{ "message": "user is not authenticated" }`.
+The landing page and `/health` endpoint are public.
 
 ### MCP Session Header
 
@@ -93,6 +96,8 @@ Parameters:
 
 - `npm run dev` for auto-reload
 - `npm start` for a basic server start
+- `node server.js --stdio` for stdio transport
+- `npm test` for the Node test suite
 - Add `--rtm-debug` to log RTM API responses in pretty JSON.
 
 ## Deployment (Heroku)
@@ -102,7 +107,7 @@ This repo is already set up for Heroku (see `Procfile`).
 ```bash
 heroku login
 heroku create your-app-name
-heroku config:set RTM_API_KEY=... RTM_SHARED_SECRET=... RTM_AUTH_TOKEN=...
+heroku config:set RTM_API_KEY=... RTM_SHARED_SECRET=... RTM_AUTH_TOKEN=... USER_TOKEN=...
 git push heroku main
 ```
 

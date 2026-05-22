@@ -1,5 +1,5 @@
 {
-  "name": "webmcp",
+  "name": "rtm-mcp",
   "version": "1.0.0",
   "description": "A remote MCP server with HTTP transport",
   "main": "server.js",
@@ -10,7 +10,8 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node --watch server.js",
-    "dev:rtm-debug": "node --watch server.js --rtm-debug"
+    "dev:rtm-debug": "node --watch server.js --rtm-debug",
+    "test": "node --test"
   },
   "keywords": ["mcp", "model-context-protocol"],
   "author": "",

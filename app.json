@@ -13,6 +13,10 @@
     "RTM_AUTH_TOKEN": {
       "description": "Remember The Milk auth token",
       "required": true
+    },
+    "USER_TOKEN": {
+      "description": "Bearer token required for HTTP MCP requests",
+      "required": true
     }
   }
 }

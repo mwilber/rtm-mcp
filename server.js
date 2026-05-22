@@ -3,58 +3,70 @@ import cors from "cors";
 import dotenv from "dotenv";
 import { registerMcpRoutes, runMcpStdio } from "./src/mcp.js";
 
-dotenv.config();
+dotenv.config({ quiet: true });
 
 if (process.argv.includes("--rtm-debug")) {
   process.env.RTM_DEBUG = "1";
 }
 
-const USER_TOKEN = process.env.USER_TOKEN;
-if (!USER_TOKEN) {
-  throw new Error("USER_TOKEN must be set to enable request authentication.");
+const isStdio = process.argv.includes("--stdio");
+
+if (isStdio) {
+  runMcpStdio().catch((error) => {
+    console.error(error);
+    process.exitCode = 1;
+  });
+} else {
+  startHttpServer();
 }
 
-const HOST = process.env.HOST || (process.env.DYNO ? "0.0.0.0" : "127.0.0.1");
-const app = createMcpExpressApp({ host: HOST });
-const PORT = process.env.PORT || 5000;
-const repoUrl = "https://github.com/mwilber/rtm-mcp";
-
-app.use(
-  cors({
-    exposedHeaders: ["mcp-session-id"],
-  })
-);
-
-const extractUserToken = (req) => {
-  const headerToken = req.headers["x-user-token"];
-  if (typeof headerToken === "string") return headerToken;
-  const auth = req.headers.authorization;
-  if (typeof auth === "string" && auth.startsWith("Bearer ")) {
-    return auth.slice("Bearer ".length);
+function startHttpServer() {
+  const USER_TOKEN = process.env.USER_TOKEN;
+  if (!USER_TOKEN) {
+    throw new Error("USER_TOKEN must be set to enable request authentication.");
   }
-  return null;
-};
 
-app.use((req, res, next) => {
-  if (req.path === "/") {
+  const HOST =
+    process.env.HOST || (process.env.DYNO ? "0.0.0.0" : "127.0.0.1");
+  const app = createMcpExpressApp({ host: HOST });
+  const PORT = process.env.PORT || 5000;
+  const repoUrl = "https://github.com/mwilber/rtm-mcp";
+
+  app.use(
+    cors({
+      exposedHeaders: ["mcp-session-id"],
+    })
+  );
+
+  const extractUserToken = (req) => {
+    const headerToken = req.headers["x-user-token"];
+    if (typeof headerToken === "string") return headerToken;
+    const auth = req.headers.authorization;
+    if (typeof auth === "string" && auth.startsWith("Bearer ")) {
+      return auth.slice("Bearer ".length);
+    }
+    return null;
+  };
+
+  app.use((req, res, next) => {
+    if (req.path === "/" || req.path === "/health") {
+      next();
+      return;
+    }
+    const token = extractUserToken(req);
+    if (token !== USER_TOKEN) {
+      res.status(401).json({ message: "user is not authenticated" });
+      return;
+    }
     next();
-    return;
-  }
-  const token = extractUserToken(req);
-  if (token !== USER_TOKEN) {
-    res.status(401).json({ message: "user is not authenticated" });
-    return;
-  }
-  next();
-});
+  });
 
-// Health check endpoint
-app.get("/health", (req, res) => {
-  res.json({ status: "ok", server: "rtm-mcp" });
-});
+  app.get("/health", (req, res) => {
+    res.json({ status: "ok", server: "rtm-mcp" });
+  });
 
-app.get("/", (req, res) => {
-  res.type("html").send(`<!doctype html>
+  app.get("/", (req, res) => {
+    res.type("html").send(`<!doctype html>
 <html lang="en">
   <head>
     <meta charset="utf-8" />
@@ -118,18 +130,13 @@ app.get("/", (req, res) => {
     </main>
   </body>
 </html>`);
-});
+  });
 
-registerMcpRoutes(app);
+  registerMcpRoutes(app);
 
-// Start the server
-app.listen(PORT, HOST, () => {
-  console.log(`MCP server running on ${HOST}:${PORT}`);
-  console.log(`Health check: http://localhost:${PORT}/health`);
-  console.log(`MCP endpoint: http://localhost:${PORT}/mcp`);
-});
-
-// If running with stdio flag
-if (process.argv.includes("--stdio")) {
-  runMcpStdio().catch(console.error);
+  app.listen(PORT, HOST, () => {
+    console.log(`MCP server running on ${HOST}:${PORT}`);
+    console.log(`Health check: http://localhost:${PORT}/health`);
+    console.log(`MCP endpoint: http://localhost:${PORT}/mcp`);
+  });
 }

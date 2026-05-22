@@ -1,5 +1,60 @@
 import crypto from "node:crypto";
 
+const SIMPLE_FILTER_VALUE = /^[A-Za-z0-9_.:-]+$/;
+const DUE_TIME_PATTERN = /\b(?:\d{1,2}:\d{2}|\d{1,2}\s*(?:am|pm))\b/i;
+
+export function quoteFilterValue(value) {
+  const normalized = String(value ?? "").trim();
+  if (!normalized) {
+    throw new Error("Filter values must be non-empty strings");
+  }
+
+  if (SIMPLE_FILTER_VALUE.test(normalized)) {
+    return normalized;
+  }
+
+  return `"${normalized.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`;
+}
+
+export function hasDueTime(value) {
+  return DUE_TIME_PATTERN.test(String(value ?? ""));
+}
+
+export function buildTaskFilter({ dueDate, tag, filter } = {}) {
+  const filterParts = [];
+
+  if (filter) {
+    filterParts.push(filter);
+  }
+
+  if (typeof dueDate === "string") {
+    filterParts.push(`due:${quoteFilterValue(dueDate)}`);
+  } else if (
+    dueDate &&
+    typeof dueDate === "object" &&
+    (dueDate.start || dueDate.end)
+  ) {
+    if (dueDate.start) {
+      filterParts.push(`dueAfter:${quoteFilterValue(dueDate.start)}`);
+    }
+    if (dueDate.end) {
+      filterParts.push(`dueBefore:${quoteFilterValue(dueDate.end)}`);
+    }
+  }
+
+  if (tag) {
+    filterParts.push(`tag:${quoteFilterValue(tag)}`);
+  }
+
+  if (filterParts.length === 0) {
+    return undefined;
+  }
+
+  return filterParts.length === 1
+    ? filterParts[0]
+    : `(${filterParts.join(" AND ")})`;
+}
+
 export class RTMClient {
   constructor({
     apiKey,
@@ -87,29 +142,7 @@ export class RTMClient {
   }
 
   async listTasks({ dueDate, tag, filter } = {}) {
-    const filterParts = [];
-
-    if (filter) {
-      filterParts.push(filter);
-    }
-
-    if (typeof dueDate === "string") {
-      filterParts.push(`due:${dueDate}`);
-    } else if (dueDate && typeof dueDate === "object" && (dueDate.start || dueDate.end)) {
-      if (dueDate.start) filterParts.push(`dueAfter:${dueDate.start}`);
-      if (dueDate.end) filterParts.push(`dueBefore:${dueDate.end}`);
-    }
-
-    if (tag) {
-      filterParts.push(`tag:${tag}`);
-    }
-
-    const filterQuery =
-      filterParts.length === 0
-        ? undefined
-        : filterParts.length === 1
-        ? filterParts[0]
-        : `(${filterParts.join(" AND ")})`;
+    const filterQuery = buildTaskFilter({ dueDate, tag, filter });
 
     const rsp = await this.#request(
       "rtm.tasks.getList",
@@ -200,7 +233,7 @@ export class RTMClient {
         ...basePath,
         due: dueDate,
         parse: 1,
-        has_due_time: /\d{1,2}:\d{2}/.test(dueDate) ? 1 : 0,
+        has_due_time: hasDueTime(dueDate) ? 1 : 0,
       });
     }
 
@@ -244,7 +277,7 @@ export class RTMClient {
       timeline,
       due: dueDate || "",
       parse: 1,
-      has_due_time: /\d{1,2}:\d{2}/.test(dueDate || "") ? 1 : 0,
+      has_due_time: hasDueTime(dueDate) ? 1 : 0,
     });
 
     return { success: true };
