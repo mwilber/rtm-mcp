@@ -20,7 +20,7 @@
 
 ## Overview
 - This server integrates the Remember The Milk API for task management.
-- Supported capabilities: listing tasks by due date and/or tag, and adding tasks with due dates, recurrence, priority, and tags.
+- Supported capabilities: listing and searching tasks, adding tasks, updating task names, due dates, recurrence, priority, and tags, and adding task notes.
 
 ## Credentials & Environment
 - Required environment variables: `RTM_API_KEY`, `RTM_SHARED_SECRET`, `RTM_AUTH_TOKEN`.
@@ -36,6 +36,15 @@
 - Adds a task with `name`, `dueDate`, `repeats`, `priority`, and `tags`.
 - Uses `rtm.timelines.create` then `rtm.tasks.add`.
 - Supports smart add via `parse=1`, or explicit follow-up calls for each attribute.
+- Returns the composite `{ list, series, task }` ID used by follow-up edits.
+
+### `updateTask`
+- Accepts the composite task ID returned by list, search, and add operations.
+- Updates only supplied values through the corresponding RTM task mutation methods.
+- Empty due date and recurrence values, a null priority, and an empty tag list clear those values.
+
+### `addTaskNote`
+- Adds notes through the separate `rtm.tasks.notes.add` API method.
 
 ## Implementation Notes
 - RTM API requests require `api_sig = MD5(shared_secret + concat(sorted(key+value)))`.

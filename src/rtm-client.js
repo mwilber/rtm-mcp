@@ -333,7 +333,7 @@ export class RTMClient {
       return;
     }
 
-    await this.#request("rtm.tasks.notes.add", {
+    return this.#request("rtm.tasks.notes.add", {
       list_id: path.list_id,
       taskseries_id: path.taskseries_id,
       task_id: path.task_id,
@@ -341,6 +341,109 @@ export class RTMClient {
       note_title: AI_NOTE_TITLE,
       note_text: noteText,
     });
+  }
+
+  async updateTask(options = {}) {
+    const { id, name, dueDate, repeats, priority, tags } = options;
+    const path = this.#normalizeTaskId(id);
+    const updates = { name, dueDate, repeats, priority, tags };
+    const suppliedFields = Object.keys(updates).filter((field) =>
+      Object.prototype.hasOwnProperty.call(options, field)
+    );
+
+    if (suppliedFields.length === 0) {
+      throw new Error("At least one task value must be supplied");
+    }
+    if (Object.prototype.hasOwnProperty.call(options, "name") && !name) {
+      throw new Error("name must be a non-empty string");
+    }
+    if (Object.prototype.hasOwnProperty.call(options, "tags") && !Array.isArray(tags)) {
+      throw new Error("tags must be an array");
+    }
+    if (
+      Object.prototype.hasOwnProperty.call(options, "priority") &&
+      priority !== null &&
+      ![1, 2, 3].includes(priority)
+    ) {
+      throw new Error("priority must be 1, 2, 3, or null");
+    }
+
+    const timeline = await this.#createTimeline();
+    const basePath = { ...path, timeline };
+
+    if (Object.prototype.hasOwnProperty.call(options, "name")) {
+      await this.#request("rtm.tasks.setName", { ...basePath, name });
+    }
+    if (Object.prototype.hasOwnProperty.call(options, "dueDate")) {
+      await this.#request("rtm.tasks.setDueDate", {
+        ...basePath,
+        ...(dueDate
+          ? {
+              due: dueDate,
+              parse: 1,
+              has_due_time: hasDueTime(dueDate) ? 1 : 0,
+            }
+          : {}),
+      });
+    }
+    if (Object.prototype.hasOwnProperty.call(options, "repeats")) {
+      await this.#request("rtm.tasks.setRecurrence", {
+        ...basePath,
+        repeat: repeats || "",
+      });
+    }
+    if (Object.prototype.hasOwnProperty.call(options, "priority")) {
+      await this.#request("rtm.tasks.setPriority", {
+        ...basePath,
+        priority: priority === null ? "N" : String(priority),
+      });
+    }
+    if (Object.prototype.hasOwnProperty.call(options, "tags")) {
+      await this.#request("rtm.tasks.setTags", {
+        ...basePath,
+        tags: tags.map((tag) => String(tag).trim()).filter(Boolean).join(","),
+      });
+    }
+
+    return {
+      success: true,
+      id: { list: path.list_id, series: path.taskseries_id, task: path.task_id },
+      updated: suppliedFields,
+    };
+  }
+
+  async addTaskNote({ id, title = AI_NOTE_TITLE, text }) {
+    const path = this.#normalizeTaskId(id);
+    const noteTitle = String(title ?? "").trim();
+    const noteText = String(text ?? "").trim();
+    if (!noteTitle && !noteText) {
+      throw new Error("A note title or text is required");
+    }
+
+    const timeline = await this.#createTimeline();
+    const rsp = await this.#request("rtm.tasks.notes.add", {
+      ...path,
+      timeline,
+      note_title: noteTitle,
+      note_text: noteText,
+    });
+
+    return {
+      success: true,
+      id: rsp?.note?.id || null,
+      taskId: { list: path.list_id, series: path.taskseries_id, task: path.task_id },
+    };
+  }
+
+  #normalizeTaskId(id) {
+    if (!id?.list || !id?.series || !id?.task) {
+      throw new Error("id.list, id.series, and id.task are required");
+    }
+    return {
+      list_id: id.list,
+      taskseries_id: id.series,
+      task_id: id.task,
+    };
   }
 
   async setDueDate({ listId, taskseriesId, taskId, dueDate }) {

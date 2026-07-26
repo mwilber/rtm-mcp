@@ -49,6 +49,9 @@ Tools are defined in `src/mcp.js`. Keep tool definitions in sync with handlers w
 
 List incomplete tasks, optionally filtered by due date or tag.
 
+Each result includes a composite `id` with `list`, `series`, and `task` values. Pass
+that object unchanged to `rtm-update-task` or `rtm-add-task-note`.
+
 Parameters:
 - `dueDate` (string, optional): Single due date filter (YYYY-MM-DD or natural language).
 - `dueStart` (string, optional): Start of a due date range (YYYY-MM-DD).
@@ -57,7 +60,8 @@ Parameters:
 
 ### `rtm-add-task`
 
-Create a task with optional due date, recurrence, priority, and tags.
+Create a task with optional due date, recurrence, priority, and tags. The result
+includes a composite `id` suitable for follow-up updates and notes.
 
 Parameters:
 - `name` (string, required): Task name.
@@ -65,8 +69,31 @@ Parameters:
 - `repeats` (string, optional): Recurrence pattern such as "every week".
 - `priority` (integer, optional): `1` (high), `2`, or `3`.
 - `tags` (string[], optional): List of tags to apply.
-- `note` (string, optional): Note body to attach to the created task. The RTM note title is fixed to `AI Generated Note`.
 - `mode` (string, optional): `smart` (default) or `explicit` for Smart Add vs explicit updates.
+
+### `rtm-update-task`
+
+Update one or more values on an existing task. Only supplied fields are changed.
+
+Parameters:
+- `id` (object, required): The composite `{ list, series, task }` ID returned by the add, list, or search tool.
+- `name` (string, optional): Replacement task name.
+- `dueDate` (string, optional): Replacement natural-language or ISO due date. An empty string clears it.
+- `repeats` (string, optional): Replacement recurrence. An empty string clears it.
+- `priority` (integer or null, optional): `1`, `2`, or `3`; `null` clears priority.
+- `tags` (string[], optional): Complete replacement tag list. An empty array removes all tags.
+
+Replacing or clearing tags uses `rtm.tasks.setTags`, which requires an RTM token
+with `delete` permission.
+
+### `rtm-add-task-note`
+
+Add a note through RTM's separate notes API.
+
+Parameters:
+- `id` (object, required): The composite `{ list, series, task }` task ID.
+- `title` (string, optional): Note title. Defaults to `AI Generated Note`.
+- `text` (string, required): Note body.
 
 ### `rtm-list-unwatched-movies`
 
@@ -87,6 +114,7 @@ Parameters:
 ### `rtm-search-tasks`
 
 Search task names, optionally filtered by tag. Defaults to incomplete tasks unless `includeCompleted` is true.
+Each result includes the same composite `id` accepted by the update and add-note tools.
 
 Parameters:
 - `query` (string, required): Search text to match task names.

@@ -10,6 +10,17 @@ import {
 import { quoteFilterValue, RTMClient } from "./rtm-client.js";
 
 const REQUIRED_RTM_ENV = ["RTM_API_KEY", "RTM_SHARED_SECRET", "RTM_AUTH_TOKEN"];
+const TASK_ID_SCHEMA = {
+  type: "object",
+  description: "Composite task ID returned by the add, list, and search tools.",
+  properties: {
+    list: { type: "string", description: "Task list identifier." },
+    series: { type: "string", description: "Task series identifier." },
+    task: { type: "string", description: "Task identifier." },
+  },
+  required: ["list", "series", "task"],
+  additionalProperties: false,
+};
 const isRtmDebugEnabled = () =>
   process.env.RTM_DEBUG === "1" ||
   process.env.RTM_DEBUG === "true" ||
@@ -54,10 +65,15 @@ const formatTaskSummary = (task) => {
   if (Array.isArray(task.tags) && task.tags.length) {
     bits.push(`#${task.tags.join(" #")}`);
   }
+  if (task.id?.list && task.id?.series && task.id?.task) {
+    bits.push(`id ${task.id.list}/${task.id.series}/${task.id.task}`);
+  }
   return bits.join(" | ");
 };
 
-function createMcpServer() {
+const formatTaskId = (id) => `${id.list}/${id.series}/${id.task}`;
+
+export function createMcpServer() {
   const mcpServer = new Server(
     {
       name: "rtm-mcp",
@@ -105,7 +121,7 @@ function createMcpServer() {
           name: "rtm-add-task",
           title: "RTM: Add Task",
           description:
-            "Create a Remember The Milk task with optional due date, recurrence, and tags.",
+            "Create a Remember The Milk task with optional due date, recurrence, priority, and tags. Returns a composite ID accepted by the update and add-note tools.",
           inputSchema: {
             type: "object",
             properties: {
@@ -134,11 +150,6 @@ function createMcpServer() {
                 maxItems: 10,
                 description: "List of tags to apply.",
               },
-              note: {
-                type: "string",
-                description:
-                  'Optional note body to attach to the created task. Uses the fixed RTM note title "AI Generated Note".',
-              },
               mode: {
                 type: "string",
                 enum: ["smart", "explicit"],
@@ -147,6 +158,70 @@ function createMcpServer() {
               },
             },
             required: ["name"],
+          },
+        },
+        {
+          name: "rtm-update-task",
+          title: "RTM: Update Task",
+          description:
+            "Update one or more editable values on an existing Remember The Milk task. Empty dueDate or repeats values clear them, null priority clears priority, and tags replaces the full tag list.",
+          inputSchema: {
+            type: "object",
+            properties: {
+              id: TASK_ID_SCHEMA,
+              name: {
+                type: "string",
+                minLength: 1,
+                description: "Replacement task name.",
+              },
+              dueDate: {
+                type: "string",
+                description:
+                  "Replacement natural-language or ISO due date. Use an empty string to clear it.",
+              },
+              repeats: {
+                type: "string",
+                description:
+                  'Replacement recurrence such as "every week". Use an empty string to clear it.',
+              },
+              priority: {
+                type: ["integer", "null"],
+                enum: [1, 2, 3, null],
+                description: "Replacement priority, or null to clear it.",
+              },
+              tags: {
+                type: "array",
+                items: { type: "string", minLength: 1 },
+                maxItems: 10,
+                description:
+                  "Complete replacement tag list. Use an empty array to remove all tags.",
+              },
+            },
+            required: ["id"],
+            additionalProperties: false,
+          },
+        },
+        {
+          name: "rtm-add-task-note",
+          title: "RTM: Add Task Note",
+          description:
+            "Add a note to an existing Remember The Milk task. Notes use RTM's separate notes API.",
+          inputSchema: {
+            type: "object",
+            properties: {
+              id: TASK_ID_SCHEMA,
+              title: {
+                type: "string",
+                description:
+                  'Note title. Defaults to "AI Generated Note" when omitted.',
+              },
+              text: {
+                type: "string",
+                description: "Note body.",
+              },
+            },
+            required: ["id", "text"],
+            additionalProperties: false,
           },
         },
         {
@@ -254,7 +329,7 @@ function createMcpServer() {
     }
 
     if (params.name === "rtm-add-task") {
-      const { name, dueDate, repeats, priority, tags, note, mode = "smart" } = args;
+      const { name, dueDate, repeats, priority, tags, mode = "smart" } = args;
       const client = resolveRtmClient();
       const result = await client.addTask({
         name,
@@ -262,7 +337,6 @@ function createMcpServer() {
         repeats: repeats || undefined,
         priority: priority || undefined,
         tags: tags || undefined,
-        note: note || undefined,
         mode,
       });
 
@@ -270,7 +344,49 @@ function createMcpServer() {
         content: [
           {
             type: "text",
-            text: `Created task "${name}" (list ${result.id.list}).`,
+            text: `Created task "${name}" (id ${formatTaskId(result.id)}).`,
+          },
+        ],
+        structuredContent: result,
+      };
+    }
+
+    if (params.name === "rtm-update-task") {
+      const client = resolveRtmClient();
+      const update = { id: args.id };
+      for (const field of ["name", "dueDate", "repeats", "priority", "tags"]) {
+        if (Object.prototype.hasOwnProperty.call(args, field)) {
+          update[field] = args[field];
+        }
+      }
+      const result = await client.updateTask(update);
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Updated task ${formatTaskId(result.id)}: ${result.updated.join(", ")}.`,
+          },
+        ],
+        structuredContent: result,
+      };
+    }
+
+    if (params.name === "rtm-add-task-note") {
+      const client = resolveRtmClient();
+      const result = await client.addTaskNote({
+        id: args.id,
+        title: args.title,
+        text: args.text,
+      });
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Added note to task ${formatTaskId(result.taskId)}${
+              result.id ? ` (note ${result.id})` : ""
+            }.`,
           },
         ],
         structuredContent: result,
