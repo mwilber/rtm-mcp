@@ -45,6 +45,23 @@ The streamable HTTP MCP transport sets `mcp-session-id` in the `initialize` resp
 
 Tools are defined in `src/mcp.js`. Keep tool definitions in sync with handlers when adding new tools.
 
+### Calendar helpers
+
+- `rtm-get-date-context`: Current local date, weekday, timezone, and period boundaries.
+- `rtm-list-holidays`: Discover known nationwide US holidays and observances with actual/observed dates.
+- `rtm-resolve-date`: Resolve structured offsets, weekday relations, weekends, period boundaries, and business days into exact dates or inclusive ranges.
+
+Set `CALENDAR_TIME_ZONE` to your RTM account's IANA timezone (default `UTC`) and
+`CALENDARIFIC_API_KEY` for holiday lookups. Ordinary date calculations work without
+the holiday service or RTM credentials. Set `CALENDARIFIC_ENABLED=false` to disable
+the provider, including after a permanent shutdown.
+
+Calendarific failures return structured retry guidance and block repeat network
+requests across MCP sessions. Prolonged failures suspend the provider until operator
+intervention; stale cached dates are explicitly labeled.
+
+See [Calendar helper inputs, examples, and failure handling](docs/calendar-tools.md).
+
 ### `rtm-list-tasks`
 
 List incomplete tasks, optionally filtered by due date or tag.
@@ -65,7 +82,7 @@ includes a composite `id` suitable for follow-up updates and notes.
 
 Parameters:
 - `name` (string, required): Task name.
-- `dueDate` (string, optional): Natural language or ISO due date, e.g., "tomorrow", "never", or "2025-10-31". Defaults to `today`; parseable dates outside today through two years ahead are reset to `today`.
+- `dueDate` (string, optional): Natural language or ISO due date, e.g., "tomorrow", "never", or "2027-10-31". Defaults to `today`; supplied parseable dates outside today through two years ahead are rejected before any RTM write. Use the calendar helpers to resolve vague dates first.
 - `repeats` (string, optional): Recurrence pattern such as "every week".
 - `priority` (integer, optional): `1` (high), `2`, or `3`.
 - `tags` (string[], optional): List of tags to apply.
@@ -137,7 +154,8 @@ This repo is already set up for Heroku (see `Procfile`).
 heroku login
 heroku create your-app-name
 heroku config:set RTM_API_KEY=... RTM_SHARED_SECRET=... RTM_AUTH_TOKEN=... USER_TOKEN=...
-git push heroku main
+heroku config:set CALENDAR_TIME_ZONE=America/New_York CALENDARIFIC_API_KEY=REPLACE_WITH_CALENDARIFIC_API_KEY CALENDARIFIC_ENABLED=false
+git push heroku HEAD:master
 ```
 
 Your MCP endpoint will be:
@@ -146,6 +164,11 @@ https://your-app-name.herokuapp.com/mcp
 ```
 
 RTM credentials should only be stored as Heroku config vars (or a local `.env` for development).
+
+The Heroku calendar settings include a placeholder key with holiday lookups disabled.
+Replace `CALENDARIFIC_API_KEY` with a real key and set `CALENDARIFIC_ENABLED=true`
+to enable holiday lookups. Calendar calculations that do not use holidays work
+while the provider is disabled.
 
 ## License
 

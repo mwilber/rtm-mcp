@@ -17,6 +17,21 @@
     "USER_TOKEN": {
       "description": "Bearer token required for HTTP MCP requests",
       "required": true
+    },
+    "CALENDAR_TIME_ZONE": {
+      "description": "IANA timezone matching the RTM account",
+      "value": "America/New_York",
+      "required": false
+    },
+    "CALENDARIFIC_API_KEY": {
+      "description": "Replace this placeholder with a Calendarific API key, then enable CALENDARIFIC_ENABLED",
+      "value": "REPLACE_WITH_CALENDARIFIC_API_KEY",
+      "required": false
+    },
+    "CALENDARIFIC_ENABLED": {
+      "description": "Keep false until a real Calendarific API key is configured; also disables a retired provider",
+      "value": "false",
+      "required": false
     }
   }
 }

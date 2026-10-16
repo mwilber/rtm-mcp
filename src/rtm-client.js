@@ -1,4 +1,5 @@
 import crypto from "node:crypto";
+import { CalendarError, addMonths, dateContext, parseDate } from "./calendar-date.js";
 
 const SIMPLE_FILTER_VALUE = /^[A-Za-z0-9_.:-]+$/;
 const DUE_TIME_PATTERN = /\b(?:\d{1,2}:\d{2}|\d{1,2}\s*(?:am|pm))\b/i;
@@ -72,28 +73,15 @@ export function ensureCreatedTaskTags(tags) {
   return normalizedTags;
 }
 
-function startOfLocalDay(date) {
-  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
-}
-
-function parseDueDateCandidate(value) {
+function parseDueDateCandidate(value, timeZone) {
   const dueDate = String(value ?? "").trim();
   const isoDateOnlyMatch = dueDate.match(ISO_DATE_ONLY_PATTERN);
   if (isoDateOnlyMatch) {
-    const [, year, month, day] = isoDateOnlyMatch;
-    const parsed = new Date(Number(year), Number(month) - 1, Number(day));
-    if (
-      parsed.getFullYear() === Number(year) &&
-      parsed.getMonth() === Number(month) - 1 &&
-      parsed.getDate() === Number(day)
-    ) {
-      return parsed;
-    }
-    return null;
+    return parseDate(dueDate);
   }
 
   const timestamp = Date.parse(dueDate);
-  return Number.isNaN(timestamp) ? null : new Date(timestamp);
+  return Number.isNaN(timestamp) ? null : parseDate(dateContext({ timeZone }, new Date(timestamp)).today);
 }
 
 export function normalizeCreatedTaskDueDate(dueDate, now = new Date()) {
@@ -102,18 +90,17 @@ export function normalizeCreatedTaskDueDate(dueDate, now = new Date()) {
     return DEFAULT_CREATED_TASK_DUE_DATE;
   }
 
-  const parsedDueDate = parseDueDateCandidate(normalizedDueDate);
+  const context = dateContext({}, now);
+  const parsedDueDate = parseDueDateCandidate(normalizedDueDate, context.timeZone);
   if (!parsedDueDate) {
     return normalizedDueDate;
   }
 
-  const today = startOfLocalDay(now);
-  const maxDueDate = new Date(today);
-  maxDueDate.setFullYear(maxDueDate.getFullYear() + MAX_CREATED_TASK_YEARS_AHEAD);
-  const parsedDueDay = startOfLocalDay(parsedDueDate);
+  const today = parseDate(context.today);
+  const maxDueDate = addMonths(today, MAX_CREATED_TASK_YEARS_AHEAD * 12);
 
-  if (parsedDueDay < today || parsedDueDay > maxDueDate) {
-    return DEFAULT_CREATED_TASK_DUE_DATE;
+  if (parsedDueDate < today || parsedDueDate > maxDueDate) {
+    throw new CalendarError("DUE_DATE_OUT_OF_RANGE", `Supplied dueDate must be between ${context.today} and ${maxDueDate.toISOString().slice(0, 10)} in ${context.timeZone}. No task was created; choose a date in range.`);
   }
 
   return normalizedDueDate;
@@ -256,9 +243,9 @@ export class RTMClient {
   async addTask({ name, dueDate, repeats, priority, tags, note, mode = "smart" }) {
     if (!name) throw new Error("name is required");
 
-    const timeline = await this.#createTimeline();
     const taskTags = ensureCreatedTaskTags(tags);
     const taskDueDate = normalizeCreatedTaskDueDate(dueDate);
+    const timeline = await this.#createTimeline();
 
     if (mode === "smart") {
       const bits = [name];

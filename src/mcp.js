@@ -8,6 +8,8 @@ import {
   isInitializeRequest,
 } from "@modelcontextprotocol/sdk/types.js";
 import { quoteFilterValue, RTMClient } from "./rtm-client.js";
+import { CALENDAR_TOOLS, callCalendarTool, calendarErrorResult } from "./calendar-tools.js";
+import { CalendarError } from "./calendar-date.js";
 
 const REQUIRED_RTM_ENV = ["RTM_API_KEY", "RTM_SHARED_SECRET", "RTM_AUTH_TOKEN"];
 const TASK_ID_SCHEMA = {
@@ -73,7 +75,7 @@ const formatTaskSummary = (task) => {
 
 const formatTaskId = (id) => `${id.list}/${id.series}/${id.task}`;
 
-export function createMcpServer() {
+export function createMcpServer({ calendarProvider, calendarNow } = {}) {
   const mcpServer = new Server(
     {
       name: "rtm-mcp",
@@ -89,6 +91,7 @@ export function createMcpServer() {
   mcpServer.setRequestHandler(ListToolsRequestSchema, async () => {
     return {
       tools: [
+        ...CALENDAR_TOOLS,
         {
           name: "rtm-list-tasks",
           title: "RTM: List Tasks",
@@ -133,7 +136,7 @@ export function createMcpServer() {
               dueDate: {
                 type: "string",
                 description:
-                  'Natural language or ISO due date, e.g., "tomorrow", "never", or "2025-10-31". Defaults to "today"; parseable dates outside today through two years ahead are reset to "today".',
+                  'Natural language or ISO due date, e.g., "tomorrow", "never", or "2027-10-31". Defaults to "today"; parseable dates outside today through two years ahead are rejected. Use calendar helpers to resolve vague dates first.',
               },
               repeats: {
                 type: "string",
@@ -295,6 +298,10 @@ export function createMcpServer() {
     const params = request.params || {};
     const args = params.arguments || {};
 
+    if (CALENDAR_TOOLS.some((tool) => tool.name === params.name)) {
+      return callCalendarTool(params.name, args, { provider: calendarProvider, now: calendarNow });
+    }
+
     if (params.name === "rtm-list-tasks") {
       const { dueDate, dueStart, dueEnd, tag } = args;
       const client = resolveRtmClient();
@@ -331,14 +338,20 @@ export function createMcpServer() {
     if (params.name === "rtm-add-task") {
       const { name, dueDate, repeats, priority, tags, mode = "smart" } = args;
       const client = resolveRtmClient();
-      const result = await client.addTask({
-        name,
-        dueDate: dueDate || undefined,
-        repeats: repeats || undefined,
-        priority: priority || undefined,
-        tags: tags || undefined,
-        mode,
-      });
+      let result;
+      try {
+        result = await client.addTask({
+          name,
+          dueDate: dueDate || undefined,
+          repeats: repeats || undefined,
+          priority: priority || undefined,
+          tags: tags || undefined,
+          mode,
+        });
+      } catch (error) {
+        if (error instanceof CalendarError) return calendarErrorResult(error);
+        throw error;
+      }
 
       return {
         content: [

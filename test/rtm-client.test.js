@@ -22,7 +22,7 @@ const makeClient = () =>
   });
 
 const getParams = (url) => new URL(url).searchParams;
-const fixedNow = new Date(2026, 4, 22, 12);
+const fixedNow = new Date("2026-05-22T12:00:00Z");
 
 afterEach(() => {
   delete globalThis.fetch;
@@ -62,11 +62,12 @@ describe("RTM filter helpers", () => {
     assert.deepEqual(ensureCreatedTaskTags(["work", ""]), ["work", "AI"]);
   });
 
-  it("normalizes missing and out-of-range created task due dates", () => {
+  it("defaults missing dates and rejects supplied out-of-range dates", () => {
     assert.equal(normalizeCreatedTaskDueDate(undefined, fixedNow), "today");
     assert.equal(normalizeCreatedTaskDueDate("", fixedNow), "today");
-    assert.equal(normalizeCreatedTaskDueDate("2026-05-21", fixedNow), "today");
-    assert.equal(normalizeCreatedTaskDueDate("2028-05-23", fixedNow), "today");
+    assert.throws(() => normalizeCreatedTaskDueDate("2026-05-21", fixedNow), { code: "DUE_DATE_OUT_OF_RANGE" });
+    assert.throws(() => normalizeCreatedTaskDueDate("2028-05-23", fixedNow), { code: "DUE_DATE_OUT_OF_RANGE" });
+    assert.throws(() => normalizeCreatedTaskDueDate("2026-02-30", fixedNow), { code: "INVALID_DATE" });
   });
 
   it("preserves natural due dates and parseable dates in range", () => {
@@ -74,6 +75,12 @@ describe("RTM filter helpers", () => {
     assert.equal(normalizeCreatedTaskDueDate("never", fixedNow), "never");
     assert.equal(normalizeCreatedTaskDueDate("2026-05-22", fixedNow), "2026-05-22");
     assert.equal(normalizeCreatedTaskDueDate("2028-05-22", fixedNow), "2028-05-22");
+  });
+
+  it("constrains the two-year limit on leap day", () => {
+    const leapDay = new Date("2028-02-29T12:00:00Z");
+    assert.equal(normalizeCreatedTaskDueDate("2030-02-28", leapDay), "2030-02-28");
+    assert.throws(() => normalizeCreatedTaskDueDate("2030-03-01", leapDay), { code: "DUE_DATE_OUT_OF_RANGE" });
   });
 });
 
@@ -302,7 +309,7 @@ describe("RTMClient", () => {
     assert.equal(getParams(requests[3]).get("tags"), "work,AI");
   });
 
-  it("uses today for out-of-range explicit add due dates", async () => {
+  it("rejects out-of-range due dates before any RTM writes in either mode", async () => {
     const requests = [];
     globalThis.fetch = async (url) => {
       requests.push(url);
@@ -326,16 +333,12 @@ describe("RTMClient", () => {
       return okResponse({});
     };
 
-    await makeClient().addTask({
-      name: "Draft plan",
-      dueDate: "1900-01-01",
-      mode: "explicit",
-    });
-
-    assert.equal(requests.length, 4);
-    const dueDateParams = getParams(requests[2]);
-    assert.equal(dueDateParams.get("method"), "rtm.tasks.setDueDate");
-    assert.equal(dueDateParams.get("due"), "today");
+    for (const mode of ["smart", "explicit"]) {
+      await assert.rejects(makeClient().addTask({
+        name: "Draft plan", dueDate: "1900-01-01", mode,
+      }), { code: "DUE_DATE_OUT_OF_RANGE" });
+    }
+    assert.equal(requests.length, 0);
   });
 
   it("adds an optional note after explicit add updates the task", async () => {
